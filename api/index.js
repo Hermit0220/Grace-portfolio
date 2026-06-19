@@ -88,6 +88,20 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
+// Delete Endpoint
+app.delete('/api/photos/:slotId', async (req, res) => {
+    try {
+        const { slotId } = req.params;
+        const photo = await Photo.findOneAndDelete({ slotId });
+        if (!photo) {
+            return res.status(404).json({ error: 'Photo not found' });
+        }
+        res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

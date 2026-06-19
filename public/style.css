@@ -1,7 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"><path fill="%23FFF" stroke="%23000" stroke-width="2" d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"/></svg>'), auto;
 }
 
 body {
@@ -22,34 +25,65 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    object-fit: cover; /* Ensures 1920x1080 canvases scale and crop consistently across screen sizes */
+    object-fit: cover;
+    /* Ensures 1920x1080 canvases scale and crop consistently across screen sizes */
     pointer-events: none;
 }
 
 /* Z-index layering based on reference image */
-.bg-paper { z-index: 1; }
+.bg-paper {
+    z-index: 1;
+}
+
 /* Offsets calculated by analyzing the center cluster vs the final layout */
-.top-left-paper { z-index: 2; top: -27vh; left: -31vw; }
-.bottom-paper { z-index: 2; top: 50vh; left: 0vw; }
-.line-flower { z-index: 3; top: 11vh; left: -46vw; }
-.roses-left { z-index: 4; top: 28vh; left: -31vw; }
-.roses-right { z-index: 4; top: 41vh; left: 26vw; }
+.top-left-paper {
+    z-index: 2;
+    top: -27vh;
+    left: -31vw;
+}
+
+.bottom-paper {
+    z-index: 2;
+    top: 50vh;
+    left: 0vw;
+}
+
+.line-flower {
+    z-index: 3;
+    top: 11vh;
+    left: -46vw;
+}
+
+.roses-left {
+    z-index: 4;
+    top: 28vh;
+    left: -31vw;
+}
+
+.roses-right {
+    z-index: 4;
+    top: 41vh;
+    left: 26vw;
+}
 
 /* Text and foreground */
 /* Wrap PORTFOLIO and GRACES to allow floating animation without affecting layout sizing */
-.portfolio-text { 
-    z-index: 5; 
-    pointer-events: auto; 
-    cursor: pointer; 
-    transition: transform 0.3s ease; 
+.portfolio-text {
+    z-index: 5;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.3s ease;
 }
-.graces-banner { 
-    z-index: 6; 
-    pointer-events: auto; 
+
+.graces-banner {
+    z-index: 6;
+    pointer-events: auto;
 }
-.hand-doodle { 
-    z-index: 7; 
-    top: -32vh; left: 36vw;
+
+.hand-doodle {
+    z-index: 7;
+    top: -32vh;
+    left: 36vw;
 }
 
 /* Micro-animations */
@@ -58,15 +92,31 @@ body {
 }
 
 @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
 }
 
 @keyframes float-delayed {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
-    100% { transform: translateY(0px); }
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
 }
 
 .floating {
@@ -83,12 +133,16 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
-    overflow: visible; /* Let bottom polaroid bleed naturally into next section */
+    overflow: visible;
+    /* Let bottom polaroid bleed naturally into next section */
     z-index: 2;
 }
 
 /* Second Page Z-index layering */
-.p2-bg { z-index: 1; }
+.p2-bg {
+    z-index: 1;
+}
+
 /* Photo containers go behind the polaroids (z-index 4), so they should be z-index 3. 
    Gift is 2, text is 5. Wait, 4.png is the polaroids. 
    Let's ensure photo containers sit just under the polaroids. */
@@ -98,9 +152,11 @@ body {
     top: 50%;
     left: 50%;
     width: 100vw;
-    height: 56.25vw; /* 1080/1920 * 100vw */
+    height: 56.25vw;
+    /* 1080/1920 * 100vw */
     min-height: 100vh;
-    min-width: 177.77vh; /* 1920/1080 * 100vh */
+    min-width: 177.77vh;
+    /* 1920/1080 * 100vh */
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
@@ -116,7 +172,8 @@ body {
 
 .photo-upload-container {
     position: absolute;
-    pointer-events: auto; /* Make the containers clickable */
+    pointer-events: auto;
+    /* Make the containers clickable */
     background-color: rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: center;
@@ -151,45 +208,64 @@ body {
     object-fit: cover;
 }
 
+.remove-btn {
+    position: absolute;
+    bottom: 0.5vw;
+    right: 0.5vw;
+    width: 2.5vw;
+    height: 2.5vw;
+    min-width: 24px;
+    min-height: 24px;
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.remove-btn:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0px 3px 6px rgba(0, 0, 0, 0.6)) brightness(1.2);
+}
+
 /* Coordinates generated from 4.png */
 .photo-1 {
     left: 84.49%;
     top: 28.75%;
-    width: 15.25%;
-    height: 22.48%;
-    transform: translate(-50%, -50%) rotate(107.20deg);
+    width: 12.65%;
+    height: 27.10%;
+    transform: translate(-50%, -50%) rotate(17.20deg);
 }
 
 .photo-2 {
     left: 60.38%;
     top: 48.10%;
-    width: 13.27%;
-    height: 22.67%;
-    transform: translate(-50%, -50%) rotate(65.60deg);
+    width: 12.75%;
+    height: 23.59%;
+    transform: translate(-50%, -50%) rotate(-24.40deg);
 }
 
 .photo-3 {
     left: 81.94%;
     top: 75.36%;
-    width: 13.61%;
-    height: 23.15%;
-    transform: translate(-50%, -50%) rotate(112.36deg);
+    width: 13.02%;
+    height: 24.19%;
+    transform: translate(-50%, -50%) rotate(22.36deg);
 }
 
 .photo-4 {
     left: 84.49%;
     top: 28.75%;
-    width: 15.25%;
-    height: 22.48%;
-    transform: translate(-50%, -50%) rotate(107.20deg);
+    width: 12.65%;
+    height: 27.10%;
+    transform: translate(-50%, -50%) rotate(17.20deg);
 }
 
 .photo-5 {
     left: 57.89%;
     top: 42.20%;
-    width: 14.04%;
-    height: 23.96%;
-    transform: translate(-50%, -50%) rotate(62.95deg);
+    width: 13.48%;
+    height: 24.95%;
+    transform: translate(-50%, -50%) rotate(-27.05deg);
 }
 
 .photo-6 {
@@ -197,7 +273,7 @@ body {
     top: 44.09%;
     width: 17.17%;
     height: 22.50%;
-    transform: translate(-50%, -50%) rotate(174.45deg);
+    transform: translate(-50%, -50%) rotate(-5.55deg);
 }
 
 .photo-7 {
@@ -205,21 +281,50 @@ body {
     top: 69.26%;
     width: 17.17%;
     height: 22.90%;
-    transform: translate(-50%, -50%) rotate(174.45deg);
+    transform: translate(-50%, -50%) rotate(-5.55deg);
 }
 
 .photo-8 {
     left: 81.94%;
     top: 75.36%;
-    width: 13.61%;
-    height: 23.15%;
-    transform: translate(-50%, -50%) rotate(112.36deg);
+    width: 13.02%;
+    height: 24.19%;
+    transform: translate(-50%, -50%) rotate(22.36deg);
 }
 
-.p2-gift { z-index: 2; transform: translate(-34vw, 23vh) scale(0.48); }
-.p2-polaroids { z-index: 4; top: 28vh; }
-.p2-text { z-index: 5; top: 15vh; }
-.p2-doodles { z-index: 6; top: 35vh; left: -15vw; }
+.p2-gift {
+    z-index: 2;
+    transform: translate(-34vw, 23vh) scale(0.48);
+}
+
+.p2-polaroids {
+    z-index: 4;
+    top: 28vh;
+}
+
+.p2-text {
+    z-index: 5;
+    top: 15vh;
+}
+
+.p2-doodles {
+    z-index: 6;
+    top: 35vh;
+    left: -15vw;
+}
+
+.p2-charm-container {
+    z-index: 6;
+    top: 45vh;
+    left: -45vw;
+    transform: scale(0.6) rotate(25deg);
+}
+
+.p2-charm {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
 /* Third Page — background continuation so nothing is cut off */
 .third-page {
@@ -244,10 +349,477 @@ body {
 }
 
 /* Frames layer — pushed down so assets match reference image */
-.p3-frames { z-index: 2; top: 20vh; }
+.p3-frames {
+    z-index: 5;
+    top: 20vh;
+}
 
 /* Halftone cat — bottom-center on canvas, pushed down with frames */
-.p3-cat { z-index: 3; top: 20vh; }
+.p3-cat {
+    z-index: 5;
+    top: 20vh;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 85%, rgba(0, 0, 0, 0) 100%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+}
 
-/* "More fits" title — pushed down to match reference */
-.p3-title { z-index: 4; top: 10vh; }
+.p3-title {
+    z-index: 4;
+    top: 10vh;
+}
+
+/* --- Music Player Styling --- */
+#music-player-container {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 11px 18px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    opacity: 0.8;
+}
+
+.control-btn:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.control-btn img {
+    width: 19px;
+    height: 19px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+#play-pause-btn img,
+#next-icon {
+    width: 21px;
+    height: 21px;
+}
+
+#next-icon {
+    opacity: 0.67;
+    height: 19px;
+    width: 19px;
+}
+
+#pause-icon {
+    width: 35px;
+    height: 35px;
+}
+
+/* Glassmorphic Slider */
+.slider-wrapper {
+    position: relative;
+    width: 0px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+
+#music-player-container:hover .slider-wrapper {
+    width: 100px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Background Track (Grey) */
+.custom-slider-bg {
+    position: absolute;
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Fill Track (White) */
+.custom-slider-fill {
+    position: absolute;
+    width: 0%;
+    /* Dynamic */
+    height: 6px;
+    background: #ffffff;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* The Invisible Native Range Input */
+#audio-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    outline: none;
+    z-index: 2;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* The Glass Thumb */
+#audio-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.15),
+        inset 0 0 10px rgba(255, 255, 255, 0.5);
+    cursor: grab;
+    transition: transform 0.1s;
+}
+
+#audio-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+}
+
+/* Fourth Page */
+.fourth-page {
+    position: relative;
+    width: 100vw;
+    height: 120vh;
+    z-index: 1;
+}
+
+.p4-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 120vh;
+    object-fit: cover;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.p4-text {
+    position: absolute;
+    z-index: 4;
+    left: 54.38%;
+    top: 6.30%;
+    width: 45.10%;
+    height: 83.52%;
+}
+
+.p4-frames {
+    z-index: 3;
+    top: 0;
+}
+
+.fourth-page .canvas-container {
+    top: 55%;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.p4-frames-img {
+    position: absolute;
+    left: 5.62%;
+    top: 11.67%;
+    width: 48.23%;
+    height: 81.20%;
+    pointer-events: none;
+}
+
+/* Approximate frame coordinates for 4th page (fine-tune as needed) */
+.photo-9 {
+    left: 24%;
+    top: 43%;
+    width: 32%;
+    height: 40%;
+    transform: translate(-50%, -50%) rotate(-0.6deg);
+    z-index: 0;
+}
+
+.photo-10 {
+    left: 36%;
+    top: 67%;
+    width: 28%;
+    height: 36%;
+    transform: translate(-50%, -50%) rotate(10deg);
+    z-index: 1;
+}
+
+/* ============================================================
+   Fifth Page — Music Taste
+   All coordinates measured from reference image 19.png (1920x1080)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
+.fifth-page {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Full-page layer wrapper — uses the same .layer trick so canvas-container centres correctly */
+.p5-layer {
+    z-index: 2;
+}
+
+/* Base style for all canvas-positioned 5th page assets */
+.p5-asset {
+    position: absolute;
+    pointer-events: none;
+    object-fit: contain;
+}
+
+/* Pink gingham fills the entire canvas */
+.p5-bg {
+    object-fit: cover;
+}
+
+/* Torn newspaper — left edge, runs from top-left corner downward
+   In 19.png the clipping is: x≈0-210 px / y≈0-595 px (out of 1920×1080) */
+.p5-newspaper-left {
+    left: -30%;
+    top: -25%;
+    width: 80;
+    height: 80%;
+    z-index: 3;
+}
+
+/* Torn newspaper — bottom centre
+   In 19.png: x≈600-1100, y≈740-1080  */
+.p5-newspaper-bottom {
+    left: 25%;
+    top: 80%;
+    width: 120%;
+    height: 80%;
+    object-fit: contain;
+    object-position: bottom left;
+    z-index: 3;
+    transform: rotate(8deg);
+
+}
+
+/* Brown paper/tape strip — the editable text area background
+   In 19.png: x≈115-1190, y≈320-720  */
+.p5-paper-strip {
+    left: 6%;
+    top: -10%;
+    width: 90%;
+    height: 100%;
+    object-fit: fill;
+    z-index: 4;
+}
+
+/* "Music Taste" title — top-left area
+   In 19.png: x≈155-710, y≈30-330  */
+.p5-title {
+    left: 0%;
+    top: 10%;
+    width: 80%;
+    height: 80%;
+    z-index: 5;
+    transform: rotate(-5deg);
+
+
+}
+
+/* Transparent text area wrapper — sits exactly over the brown paper strip */
+.p5-text-area {
+    position: absolute;
+    left: 18%;
+    top: 40%;
+    width: 62%;
+    height: 38%;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1.2%;
+    pointer-events: auto;
+}
+
+/* Shared typewriter textarea styles */
+.p5-textbox {
+    top: 2%;
+    background: transparent;
+    border: none;
+    outline: none;
+
+    font-family: 'Special Elite', 'Courier New', Courier, monospace;
+    color: #5a1a1a;
+    letter-spacing: 0.08em;
+    text-align: center;
+    width: 70%;
+    height: 50%;
+    overflow: hidden;
+    line-height: 1.5;
+    padding: 0;
+}
+
+.p5-textbox::placeholder {
+    color: #5a1a1aaa;
+}
+
+/* Song heading — bold, larger */
+.p5-textbox-title {
+    font-size: 2.4vw;
+    font-weight: bold;
+    height: 14%;
+    min-height: 2.8vw;
+}
+
+/* Song details — lighter weight, smaller */
+.p5-textbox-details {
+    font-size: 1.5vw;
+    font-weight: normal;
+    margin-top: 2%;
+    flex: 1;
+    height: 72%;
+}
+
+/* Shared disc styling */
+.p5-disc {
+    position: absolute;
+    pointer-events: none;
+    z-index: 5;
+    transform-origin: center;
+    opacity: 0;
+}
+
+/* 
+  Synchronized 4-phase conveyor animation
+  Phases: 0%, 25%, 50%, 75%
+  Total duration: 16s
+*/
+@keyframes conveyor {
+    /* Phase 1: Off-screen Bottom -> Bottom Corner */
+    0% {
+        left: 110%;
+        top: 100%;
+        width: 5%;
+        opacity: 0;
+        transform: rotate(0deg);
+    }
+    10% {
+        left: 82%;
+        top: 75%;
+        width: 14%;
+        opacity: 1;
+        transform: rotate(180deg);
+    }
+    25% {
+        left: 82%;
+        top: 75%;
+        width: 14%;
+        opacity: 1;
+        transform: rotate(360deg);
+    }
+
+    /* Phase 2: Bottom Corner -> Center */
+    35% {
+        left: 70%;
+        top: 40%;
+        width: 18%;
+        opacity: 1;
+        transform: rotate(540deg);
+    }
+    50% {
+        left: 70%;
+        top: 40%;
+        width: 18%;
+        opacity: 1;
+        transform: rotate(720deg);
+    }
+
+    /* Phase 3: Center -> Top */
+    60% {
+        left: 88%;
+        top: 15%;
+        width: 10%;
+        opacity: 1;
+        transform: rotate(900deg);
+    }
+    75% {
+        left: 88%;
+        top: 15%;
+        width: 10%;
+        opacity: 1;
+        transform: rotate(1080deg);
+    }
+
+    /* Phase 4: Top -> Off-screen Top -> Reset */
+    85% {
+        left: 110%;
+        top: -10%;
+        width: 5%;
+        opacity: 0;
+        transform: rotate(1260deg);
+    }
+    85.1% {
+        /* Instant teleport to Off-screen Bottom */
+        left: 110%;
+        top: 100%;
+        width: 5%;
+        opacity: 0;
+        transform: rotate(1260deg);
+    }
+    100% {
+        left: 110%;
+        top: 100%;
+        width: 5%;
+        opacity: 0;
+        transform: rotate(1440deg);
+    }
+}
+
+/* Apply animation with 4s offsets for a 16s total loop */
+.p5-disc-1 {
+    animation: conveyor 16s infinite ease-in-out;
+    animation-delay: 0s;
+}
+.p5-disc-2 {
+    animation: conveyor 16s infinite ease-in-out;
+    animation-delay: -4s;
+}
+.p5-disc-3 {
+    animation: conveyor 16s infinite ease-in-out;
+    animation-delay: -8s;
+}
+.p5-disc-4 {
+    animation: conveyor 16s infinite ease-in-out;
+    animation-delay: -12s;
+}

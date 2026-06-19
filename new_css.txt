@@ -1,0 +1,60 @@
+/* Page 2 */
+
+.photo-1 {
+    left: 84.49%;
+    top: 28.75%;
+    width: 12.65%;
+    height: 27.10%;
+    transform: translate(-50%, -50%) rotate(17.20deg);
+}
+.photo-2 {
+    left: 60.38%;
+    top: 48.10%;
+    width: 12.75%;
+    height: 23.59%;
+    transform: translate(-50%, -50%) rotate(-24.40deg);
+}
+.photo-3 {
+    left: 81.94%;
+    top: 75.36%;
+    width: 13.02%;
+    height: 24.19%;
+    transform: translate(-50%, -50%) rotate(22.36deg);
+}
+/* Page 3 */
+
+.photo-4 {
+    left: 84.49%;
+    top: 28.75%;
+    width: 12.65%;
+    height: 27.10%;
+    transform: translate(-50%, -50%) rotate(17.20deg);
+}
+.photo-5 {
+    left: 57.89%;
+    top: 42.20%;
+    width: 13.48%;
+    height: 24.95%;
+    transform: translate(-50%, -50%) rotate(-27.05deg);
+}
+.photo-6 {
+    left: 17.31%;
+    top: 44.09%;
+    width: 12.66%;
+    height: 30.52%;
+    transform: translate(-50%, -50%) rotate(84.45deg);
+}
+.photo-7 {
+    left: 18.69%;
+    top: 69.26%;
+    width: 12.88%;
+    height: 30.52%;
+    transform: translate(-50%, -50%) rotate(84.45deg);
+}
+.photo-8 {
+    left: 81.94%;
+    top: 75.36%;
+    width: 13.02%;
+    height: 24.19%;
+    transform: translate(-50%, -50%) rotate(22.36deg);
+}

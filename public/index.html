@@ -9,7 +9,31 @@
 </head>
 
 <body>
+
     <div class="landing-page">
+        <!-- Music Player -->
+        <div id="music-player-container">
+            <div class="player-controls">
+
+                <button id="play-pause-btn" class="control-btn">
+                    <img id="play-icon" src="play-button-svgrepo-com.svg" alt="Play">
+                    <img id="pause-icon" src="pause-svgrepo-com.svg" alt="Pause" style="display: none;">
+                </button>
+
+            </div>
+            <div class="slider-wrapper">
+                <div class="custom-slider-bg"></div>
+                <div class="custom-slider-fill" id="slider-fill"></div>
+                <input type="range" id="audio-slider" min="0" max="100" value="0" step="0.1">
+            </div>
+            <div class="player-controls">
+                <button id="next-track-btn" class="control-btn">
+                    <img id="next-icon" src="next-svgrepo-com.svg" alt="Next">
+                </button>
+            </div>
+            <audio id="audio-element" src="audio/Excitement.mp3"></audio>
+        </div>
+
         <!-- Background elements -->
         <img src="Image assets/2.png" class="layer bg-paper" alt="Background Paper">
         <img src="Image assets/8.png" class="layer top-left-paper parallax" data-speed="0.05" alt="Torn Paper">
@@ -35,8 +59,7 @@
         <!-- Interactive Photo Upload Containers have been moved inside the 4.png layer wrapper -->
 
         <!-- Foreground elements -->
-        <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/5.png"
-            class="layer p2-gift parallax" data-speed="0.04" alt="Gift and Roses">
+
         <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/3.png"
             class="layer p2-text floating" alt="About Me Text">
         <div class="layer p2-polaroids parallax" data-speed="-0.03">
@@ -45,48 +68,64 @@
                 <div class="photo-upload-container photo-1">
                     <input type="file" class="file-input" id="file-input-1" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 1" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-2">
                     <input type="file" class="file-input" id="file-input-2" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 2" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-3">
                     <input type="file" class="file-input" id="file-input-3" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 3" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/4.png"
                     class="canvas-img" alt="Fit Checks and Frames">
             </div>
         </div>
-        <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/Brown Red Flower Scrapbook Creative Portfolio Presentation.png"
-            class="layer p2-doodles floating-delayed" alt="Doodles">
+
+        <div class="layer p2-charm-container">
+            <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/7(1).png"
+                class="p2-charm floating" alt="Heart Charm">
+        </div>
     </section>
 
     <!-- Third Page: More Fits -->
     <section class="third-page" id="more-fits">
         <!-- Background: same crumpled paper as page 2, flipped for seamless seam -->
-        <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/2.png" class="layer p3-bg" alt="Third Page Background">
+        <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/2.png"
+            class="layer p3-bg" alt="Third Page Background">
 
         <!-- Photo frames, doodles, cat, paper plane — all correctly positioned on 1920x1080 canvas -->
         <div class="layer p3-frames">
@@ -94,68 +133,195 @@
                 <div class="photo-upload-container photo-4">
                     <input type="file" class="file-input" id="file-input-4" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 4" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-5">
                     <input type="file" class="file-input" id="file-input-5" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 5" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-6">
                     <input type="file" class="file-input" id="file-input-6" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 6" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-7">
                     <input type="file" class="file-input" id="file-input-7" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 7" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
                 <div class="photo-upload-container photo-8">
                     <input type="file" class="file-input" id="file-input-8" accept="image/*" hidden>
                     <div class="upload-content">
-                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         <span>Add Photo</span>
                     </div>
                     <img class="uploaded-img" src="" alt="Photo 8" style="display: none;">
+
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
                 </div>
-                <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/Brown Red Flower Scrapbook Creative Portfolio Presentation.png" class="canvas-img" alt="Photo Frames">
+                <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/Brown Red Flower Scrapbook Creative Portfolio Presentation.png"
+                    class="canvas-img" alt="Photo Frames">
             </div>
         </div>
 
         <!-- Halftone cat — sits bottom center on canvas -->
-        <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/3.png" class="layer p3-cat floating" alt="Halftone Cat">
+        <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/3.png"
+            class="layer p3-cat floating" alt="Halftone Cat">
 
         <!-- More fits text — top-center area on canvas -->
-        <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/2.png" class="layer p3-title floating-delayed" alt="More Fits Text">
+        <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/2.png"
+            class="layer p3-title floating-delayed" alt="More Fits Text">
     </section>
+
+    <!-- Fourth Page: Sweet Ambitions -->
+    <section class="fourth-page" id="sweet-ambitions">
+        <!-- Background -->
+        <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/2.png"
+            class="layer p4-bg" alt="Fourth Page Background">
+
+        <div class="layer p4-frames">
+            <div class="canvas-container">
+                <!-- Text and torn paper inside canvas for exact 16:9 alignment -->
+                <img src="Image assets/4th page/Brown Red Flower Scrapbook Creative Portfolio Presentation (3).png"
+                    class="p4-text floating" alt="Sweet Ambitions Text">
+
+                <!-- Top-left polaroid frame -->
+                <div class="photo-upload-container photo-9">
+                    <input type="file" class="file-input" id="file-input-9" accept="image/*" hidden>
+                    <div class="upload-content">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Photo</span>
+                    </div>
+                    <img class="uploaded-img" src="" alt="Photo 9" style="display: none;">
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
+                </div>
+
+                <!-- Bottom-right polaroid frame overlapping -->
+                <div class="photo-upload-container photo-10">
+                    <input type="file" class="file-input" id="file-input-10" accept="image/*" hidden>
+                    <div class="upload-content">
+                        <svg class="add-icon" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Photo</span>
+                    </div>
+                    <img class="uploaded-img" src="" alt="Photo 10" style="display: none;">
+                    <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
+                        style="display: none;">
+                </div>
+
+                <!-- Frames Image (Overlaying the upload containers) -->
+                <img src="Image assets/4th page/Brown Red Flower Scrapbook Creative Portfolio Presentation (2).png"
+                    class="p4-frames-img" alt="Frames">
+
+                <!-- Top overlay image (e.g. glass reflections or top borders) -->
+                <img src="Image assets/4th page/Brown Red Flower Scrapbook Creative Portfolio Presentation (5).png"
+                    class="p4-frames-img" style="z-index: 5;" alt="Frames Overlay">
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Fifth Page: Music Taste -->
+    <section class="fifth-page" id="music-taste">
+
+        <div class="layer p5-layer">
+            <div class="canvas-container">
+
+                <!-- Background: pink gingham -->
+                <img src="Image assets/5th page/20.png" class="canvas-img p5-bg" alt="Pink Gingham Background">
+
+                <!-- Torn newspaper left edge -->
+                <img src="Image assets/5th page/21.png" class="p5-asset p5-newspaper-left" alt="Torn Newspaper Left">
+
+                <!-- Torn newspaper bottom center -->
+                <img src="Image assets/5th page/22.png" class="p5-asset p5-newspaper-bottom"
+                    alt="Torn Newspaper Bottom">
+
+                <!-- Brown paper strip — text area -->
+                <img src="Image assets/5th page/23.png" class="p5-asset p5-paper-strip" alt="Brown Paper Strip">
+
+                <!-- Music Taste title -->
+                <img src="Image assets/5th page/27.png" class="p5-asset p5-title" alt="Music Taste Title">
+
+                <!-- Discs for 4-state synchronized conveyor animation -->
+                <img src="Image assets/5th page/disc-top.png" class="p5-asset p5-disc p5-disc-4" alt="Top Disc 2">
+                <img src="Image assets/5th page/disc-top.png" class="p5-asset p5-disc p5-disc-3" alt="Top Disc">
+                <img src="Image assets/5th page/disc-center.png" class="p5-asset p5-disc p5-disc-2"
+                    alt="Center Right Disc">
+                <img src="Image assets/5th page/disc-bottom.png" class="p5-asset p5-disc p5-disc-1"
+                    alt="Bottom Right Disc">
+
+                <div class="p5-text-area">
+                    <!-- Song title input -->
+                    <textarea id="p5-song-title" class="p5-textbox p5-textbox-title" placeholder="SONG HEADING"
+                        onfocus="this.placeholder=''" onblur="this.placeholder='SONG HEADING...'" maxlength="28"
+                        rows="1" spellcheck="true"></textarea>
+                    <!-- Song details input -->
+                    <textarea id="p5-song-details" class="p5-textbox p5-textbox-details"
+                        placeholder="&#10;Write what you feel about this song...&#10;&#10;" maxlength="160" rows="5"
+                        onfocus="this.placeholder = ''" onblur="this.placeholder = 'Type your text here...'"
+                        spellcheck="false"></textarea>
+                </div>
+
+            </div>
+        </div>
+
+    </section>
+
 
     <script src="script.js"></script>
 </body>
