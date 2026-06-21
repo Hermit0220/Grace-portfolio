@@ -114,19 +114,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         method: 'POST',
                         body: formData // Send the raw file to the Express server!
                     })
-                    .then(res => res.json())
-                    .then(data => {
-                        saveBtn.textContent = 'Saved!';
-                        setTimeout(() => {
-                            saveBtn.style.display = 'none';
-                        }, 2000);
-                        currentSelectedFile = null;
-                    })
-                    .catch(err => {
-                        console.error('Error uploading photo to DB:', err);
-                        saveBtn.textContent = 'Error';
-                        saveBtn.disabled = false;
-                    });
+                        .then(res => res.json())
+                        .then(data => {
+                            saveBtn.textContent = 'Saved!';
+                            setTimeout(() => {
+                                saveBtn.style.display = 'none';
+                            }, 2000);
+                            currentSelectedFile = null;
+                        })
+                        .catch(err => {
+                            console.error('Error uploading photo to DB:', err);
+                            saveBtn.textContent = 'Error';
+                            saveBtn.disabled = false;
+                        });
                 }
             });
         }
