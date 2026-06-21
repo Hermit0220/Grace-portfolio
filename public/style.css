@@ -576,12 +576,12 @@ body {
     z-index: 1;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
 /* ============================================================
    Fifth Page — Music Taste
    All coordinates measured from reference image 19.png (1920x1080)
    ============================================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
 
 .fifth-page {
     position: relative;

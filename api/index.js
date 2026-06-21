@@ -30,9 +30,13 @@ const upload = multer({ storage: storage });
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+if (!process.env.MONGO_URI) {
+    console.error("🚨 CRITICAL ERROR: MONGO_URI is completely missing from Vercel Environment Variables! The API cannot start.");
+} else {
+    mongoose.connect(process.env.MONGO_URI)
+      .then(() => console.log('MongoDB connected'))
+      .catch(err => console.error('MongoDB connection error:', err));
+}
 
 // Define Schema
 const photoSchema = new mongoose.Schema({
@@ -60,6 +64,9 @@ async function moveImageToRemoved(imageUrl) {
 
 // API Routes
 app.get('/api/photos', async (req, res) => {
+    if (!process.env.MONGO_URI) {
+        return res.status(500).json({ error: "CRITICAL: MONGO_URI is missing from Vercel Environment Variables. Please add it and Redeploy." });
+    }
     try {
         const photos = await Photo.find();
         res.json(photos);
