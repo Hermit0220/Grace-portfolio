@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadContainers = document.querySelectorAll('.photo-upload-container');
 
     uploadContainers.forEach(container => {
+        let currentSelectedFile = null;
         const fileInput = container.querySelector('.file-input');
         const uploadContent = container.querySelector('.upload-content');
         const uploadedImg = container.querySelector('.uploaded-img');
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (saveBtn) saveBtn.style.display = 'none';
                     uploadContent.style.display = 'flex';
                     fileInput.value = ''; // reset
+                    currentSelectedFile = null;
 
                     fetch(`/api/photos/${slotClass}`, {
                         method: 'DELETE'
@@ -73,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                currentSelectedFile = file;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const base64String = e.target.result;
@@ -82,25 +85,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploadedImg.src = base64String;
                     uploadedImg.style.display = 'block';
                     if (removeBtn) removeBtn.style.display = 'block';
-                    if (saveBtn) saveBtn.style.display = 'block';
-
-                    // Extract the slot class (e.g., "photo-1")
-                    const slotClass = Array.from(container.classList).find(c => c.startsWith('photo-'));
-
-                    if (slotClass) {
-                        const formData = new FormData();
-                        formData.append('slotId', slotClass);
-                        formData.append('file', file);
-
-                        fetch('/api/upload', {
-                            method: 'POST',
-                            body: formData // Send the raw file to the Express server!
-                        }).catch(err => console.error('Error uploading photo to DB:', err));
+                    if (saveBtn) {
+                        saveBtn.style.display = 'block';
+                        saveBtn.textContent = 'Save';
+                        saveBtn.disabled = false;
                     }
                 };
                 reader.readAsDataURL(file);
             }
         });
+
+        // Handle save button click
+        if (saveBtn) {
+            saveBtn.addEventListener('click', (event) => {
+                event.stopPropagation(); // Stop click from bubbling up to the container
+                if (!currentSelectedFile) return;
+
+                const slotClass = Array.from(container.classList).find(c => c.startsWith('photo-'));
+                if (slotClass) {
+                    saveBtn.textContent = 'Saving...';
+                    saveBtn.disabled = true;
+
+                    const formData = new FormData();
+                    formData.append('slotId', slotClass);
+                    formData.append('file', currentSelectedFile);
+
+                    fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData // Send the raw file to the Express server!
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        saveBtn.textContent = 'Saved!';
+                        setTimeout(() => {
+                            saveBtn.style.display = 'none';
+                        }, 2000);
+                        currentSelectedFile = null;
+                    })
+                    .catch(err => {
+                        console.error('Error uploading photo to DB:', err);
+                        saveBtn.textContent = 'Error';
+                        saveBtn.disabled = false;
+                    });
+                }
+            });
+        }
     });
 
     // --- Page 5 Disc Conveyor Logic ---

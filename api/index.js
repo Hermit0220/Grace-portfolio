@@ -39,6 +39,23 @@ const photoSchema = new mongoose.Schema({
 });
 const Photo = mongoose.model('Photo', photoSchema);
 
+// Helper function to move images to User_Removed folder
+async function moveImageToRemoved(imageUrl) {
+    if (!imageUrl) return;
+    try {
+        const match = imageUrl.match(/\/v\d+\/(.+)\.\w+$/);
+        if (match && match[1]) {
+            const oldPublicId = match[1];
+            const filename = oldPublicId.split('/').pop();
+            const newPublicId = `User_Removed/${filename}`;
+            await cloudinary.uploader.rename(oldPublicId, newPublicId);
+            console.log(`Moved ${oldPublicId} to ${newPublicId}`);
+        }
+    } catch (err) {
+        console.error("Failed to move image to User_Removed:", err);
+    }
+}
+
 // API Routes
 app.get('/api/photos', async (req, res) => {
     try {
@@ -58,9 +75,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'Missing slotId or file' });
         }
 
+        // If a photo already exists in this slot, move the old one to User_Removed
+        const existingPhoto = await Photo.findOne({ slotId });
+        if (existingPhoto) {
+            await moveImageToRemoved(existingPhoto.imageData);
+        }
+
         // Upload Buffer to Cloudinary via stream
         const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "scrapbook", resource_type: "auto" }, // resource_type 'auto' supports audio/video later
+            { folder: "User", resource_type: "auto" }, // resource_type 'auto' supports audio/video later
             async (error, result) => {
                 if (error) return res.status(500).json({ error: error.message });
 
@@ -96,6 +119,10 @@ app.delete('/api/photos/:slotId', async (req, res) => {
         if (!photo) {
             return res.status(404).json({ error: 'Photo not found' });
         }
+
+        // Move the removed image to the User_Removed folder in Cloudinary
+        await moveImageToRemoved(photo.imageData);
+
         res.json({ message: 'Deleted successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
