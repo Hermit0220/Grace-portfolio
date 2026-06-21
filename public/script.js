@@ -19,12 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.querySelector(`.${photo.slotId}`);
                     if (container) {
                         const uploadContent = container.querySelector('.upload-content');
-                        const uploadedImg = container.querySelector('.uploaded-img');
                         const removeBtn = container.querySelector('.remove-btn');
+                        const saveBtn = container.querySelector('.polaroid-save-btn');
                         uploadContent.style.display = 'none';
                         uploadedImg.src = photo.imageData;
                         uploadedImg.style.display = 'block';
                         if (removeBtn) removeBtn.style.display = 'block';
+                        if (saveBtn) saveBtn.style.display = 'block';
                     }
                 });
             }
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const uploadContent = container.querySelector('.upload-content');
         const uploadedImg = container.querySelector('.uploaded-img');
         const removeBtn = container.querySelector('.remove-btn');
+        const saveBtn = container.querySelector('.polaroid-save-btn');
 
         // Clicking the container triggers the hidden file input
         container.addEventListener('click', () => {
@@ -55,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Update UI instantly
                     uploadedImg.style.display = 'none';
                     uploadedImg.src = '';
-                    removeBtn.style.display = 'none';
+                    if (removeBtn) removeBtn.style.display = 'none';
+                    if (saveBtn) saveBtn.style.display = 'none';
                     uploadContent.style.display = 'flex';
                     fileInput.value = ''; // reset
 
@@ -79,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploadedImg.src = base64String;
                     uploadedImg.style.display = 'block';
                     if (removeBtn) removeBtn.style.display = 'block';
+                    if (saveBtn) saveBtn.style.display = 'block';
 
                     // Extract the slot class (e.g., "photo-1")
                     const slotClass = Array.from(container.classList).find(c => c.startsWith('photo-'));
@@ -99,6 +103,81 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // --- Page 5 Disc Conveyor Logic ---
+    const p5Discs = [
+        document.querySelector('.p5-disc-1'),
+        document.querySelector('.p5-disc-2'),
+        document.querySelector('.p5-disc-3'),
+        document.querySelector('.p5-disc-4')
+    ];
+
+    // Initial states: Disc 1 at Bottom(1), Disc 2 at Center(2), Disc 3 at Top(3), Disc 4 at Offscreen Bottom(0)
+    let discStates = [1, 2, 3, 0];
+
+    // Make advanceDiscs globally accessible so audio player can call it
+    window.advanceDiscs = function () {
+        if (!p5Discs[0]) return;
+
+        p5Discs.forEach((disc, i) => {
+            let currentState = discStates[i];
+            let nextState = currentState + 1;
+
+            if (nextState === 4) {
+                // Move to Offscreen Top (state 4)
+                disc.classList.remove(`p5-pos-${currentState}`);
+                disc.classList.add('p5-pos-4');
+
+                // After transition finishes (1.5s), teleport to Offscreen Bottom (state 0)
+                setTimeout(() => {
+                    disc.classList.add('no-transition'); // Disable transition
+                    disc.classList.remove('p5-pos-4');
+                    disc.classList.add('p5-pos-0');
+
+                    // Force reflow
+                    void disc.offsetWidth;
+
+                    disc.classList.remove('no-transition'); // Re-enable transition
+                    discStates[i] = 0;
+                }, 1500);
+            } else if (nextState < 4) {
+                disc.classList.remove(`p5-pos-${currentState}`);
+                disc.classList.add(`p5-pos-${nextState}`);
+                discStates[i] = nextState;
+            }
+        });
+    };
+
+    if (p5Discs[0]) {
+        // Apply initial classes
+        p5Discs.forEach((disc, i) => {
+            disc.classList.add(`p5-pos-${discStates[i]}`);
+        });
+
+        // Add Track & Save Track functionality (Dysfunctional DB for now)
+        const p5AddBtn = document.getElementById('p5-add-btn');
+        const p5FileInput = document.getElementById('p5-file-input');
+        const p5SaveBtn = document.getElementById('p5-save-btn');
+
+        if (p5AddBtn && p5FileInput) {
+            p5AddBtn.addEventListener('click', () => {
+                p5FileInput.click();
+            });
+
+            p5FileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    p5SaveBtn.style.display = 'block'; // Show Save button
+                }
+            });
+
+            p5SaveBtn.addEventListener('click', () => {
+                // Keep dysfunctional for now as per user request
+                alert("File selected. Saving to database is not yet implemented.");
+                p5SaveBtn.style.display = 'none';
+                p5FileInput.value = '';
+            });
+        }
+    }
+
     // --- Music Player Logic ---
     const audioElement = document.getElementById('audio-element');
     const playPauseBtn = document.getElementById('play-pause-btn');
@@ -107,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioSlider = document.getElementById('audio-slider');
     const sliderFill = document.getElementById('slider-fill');
     const nextTrackBtn = document.getElementById('next-track-btn');
+    const p5NextBtn = document.getElementById('p5-next-btn');
 
     const tracks = [
         "audio/Sade - Smooth Operator (Lyrics).mp3",
@@ -119,9 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
         "audio/Guns N' Roses - November Rain (Lyrics).mp3",
         "audio/Jhené Aiko - stranger (Audio).mp3",
         "audio/Salvatore.mp3"
-
     ];
     let currentTrackIndex = 0;
+
     if (audioElement) {
         audioElement.src = tracks[currentTrackIndex];
 
@@ -133,25 +213,29 @@ document.addEventListener('DOMContentLoaded', () => {
         function togglePlay() {
             if (audioElement.paused) {
                 audioElement.play();
-                playIcon.style.display = 'none';
-                pauseIcon.style.display = 'block';
+                if (playIcon) playIcon.style.display = 'none';
+                if (pauseIcon) pauseIcon.style.display = 'block';
             } else {
                 audioElement.pause();
-                playIcon.style.display = 'block';
-                pauseIcon.style.display = 'none';
+                if (playIcon) playIcon.style.display = 'block';
+                if (pauseIcon) pauseIcon.style.display = 'none';
             }
         }
 
-        function playNextTrack() {
+        window.playNextTrack = function () {
             currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
             audioElement.src = tracks[currentTrackIndex];
             audioElement.play();
-            playIcon.style.display = 'none';
-            pauseIcon.style.display = 'block';
+            if (playIcon) playIcon.style.display = 'none';
+            if (pauseIcon) pauseIcon.style.display = 'block';
+
+            // Advance discs on next track
+            if (window.advanceDiscs) window.advanceDiscs();
         }
 
         if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
-        if (nextTrackBtn) nextTrackBtn.addEventListener('click', playNextTrack);
+        if (nextTrackBtn) nextTrackBtn.addEventListener('click', window.playNextTrack);
+        if (p5NextBtn) p5NextBtn.addEventListener('click', window.playNextTrack);
 
         // Adjust volume when user drags slider
         if (audioSlider) {
@@ -163,6 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Auto-play next track when current ends
-        audioElement.addEventListener('ended', playNextTrack);
+        audioElement.addEventListener('ended', window.playNextTrack);
     }
 });

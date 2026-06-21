@@ -79,6 +79,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-2">
                     <input type="file" class="file-input" id="file-input-2" accept="image/*" hidden>
@@ -94,6 +95,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-3">
                     <input type="file" class="file-input" id="file-input-3" accept="image/*" hidden>
@@ -109,6 +111,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <img src="Image assets/Second Page Images/Brown Red Flower Scrapbook Creative Portfolio Presentation/4.png"
                     class="canvas-img" alt="Fit Checks and Frames">
@@ -144,6 +147,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-5">
                     <input type="file" class="file-input" id="file-input-5" accept="image/*" hidden>
@@ -159,6 +163,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-6">
                     <input type="file" class="file-input" id="file-input-6" accept="image/*" hidden>
@@ -174,6 +179,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-7">
                     <input type="file" class="file-input" id="file-input-7" accept="image/*" hidden>
@@ -189,6 +195,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <div class="photo-upload-container photo-8">
                     <input type="file" class="file-input" id="file-input-8" accept="image/*" hidden>
@@ -204,6 +211,7 @@
 
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
                 <img src="Image assets/Third page boothpic/Brown Red Flower Scrapbook Creative Portfolio Presentation/Brown Red Flower Scrapbook Creative Portfolio Presentation.png"
                     class="canvas-img" alt="Photo Frames">
@@ -245,6 +253,7 @@
                     <img class="uploaded-img" src="" alt="Photo 9" style="display: none;">
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
 
                 <!-- Bottom-right polaroid frame overlapping -->
@@ -261,6 +270,7 @@
                     <img class="uploaded-img" src="" alt="Photo 10" style="display: none;">
                     <img src="button-remove-svgrepo-com.svg" class="remove-btn" alt="Remove Photo"
                         style="display: none;">
+                    <button class="polaroid-save-btn glass-btn" style="display: none;">Save</button>
                 </div>
 
                 <!-- Frames Image (Overlaying the upload containers) -->
@@ -316,7 +326,21 @@
                         onfocus="this.placeholder = ''" onblur="this.placeholder = 'Type your text here...'"
                         spellcheck="false"></textarea>
                 </div>
+               
+                <!-- Page 5 Controls -->
+                <div class="p5-controls-left">
+                    <button id="p5-add-btn" class="glass-btn">Add Track</button>
+                    <input type="file" id="p5-file-input" accept="audio/*" style="display: none;">
+                    <button id="p5-save-btn" class="glass-btn" style="display: none;">Save Track</button>
+                </div>
 
+                <div class="p5-controls-right">
+                    <button id="p5-next-btn" class="glass-btn icon-btn">
+                        <img src="next-svgrepo-com (2).svg" alt="Next Track">
+                    </button>
+                </div>
+
+                <audio id="p5-audio-player" style="display: none;"></audio>
             </div>
         </div>
 

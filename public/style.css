@@ -717,109 +717,140 @@ body {
     pointer-events: none;
     z-index: 5;
     transform-origin: center;
+    /* Independent constant spin */
+    animation: continuous-spin 12s linear infinite;
+    /* Smooth transition for movement */
+    transition: left 1.5s ease-in-out, top 1.5s ease-in-out, width 1.5s ease-in-out, opacity 1.5s ease-in-out;
+}
+
+/* Continuous independent spin */
+@keyframes continuous-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Static Positional Classes for JS State Machine */
+.p5-pos-0 {
+    /* Off-screen Bottom */
+    left: 110%;
+    top: 100%;
+    width: 5%;
     opacity: 0;
 }
 
-/* 
-  Synchronized 4-phase conveyor animation
-  Phases: 0%, 25%, 50%, 75%
-  Total duration: 16s
-*/
-@keyframes conveyor {
-    /* Phase 1: Off-screen Bottom -> Bottom Corner */
-    0% {
-        left: 110%;
-        top: 100%;
-        width: 5%;
-        opacity: 0;
-        transform: rotate(0deg);
-    }
-    10% {
-        left: 82%;
-        top: 75%;
-        width: 14%;
-        opacity: 1;
-        transform: rotate(180deg);
-    }
-    25% {
-        left: 82%;
-        top: 75%;
-        width: 14%;
-        opacity: 1;
-        transform: rotate(360deg);
-    }
-
-    /* Phase 2: Bottom Corner -> Center */
-    35% {
-        left: 70%;
-        top: 40%;
-        width: 18%;
-        opacity: 1;
-        transform: rotate(540deg);
-    }
-    50% {
-        left: 70%;
-        top: 40%;
-        width: 18%;
-        opacity: 1;
-        transform: rotate(720deg);
-    }
-
-    /* Phase 3: Center -> Top */
-    60% {
-        left: 88%;
-        top: 15%;
-        width: 10%;
-        opacity: 1;
-        transform: rotate(900deg);
-    }
-    75% {
-        left: 88%;
-        top: 15%;
-        width: 10%;
-        opacity: 1;
-        transform: rotate(1080deg);
-    }
-
-    /* Phase 4: Top -> Off-screen Top -> Reset */
-    85% {
-        left: 110%;
-        top: -10%;
-        width: 5%;
-        opacity: 0;
-        transform: rotate(1260deg);
-    }
-    85.1% {
-        /* Instant teleport to Off-screen Bottom */
-        left: 110%;
-        top: 100%;
-        width: 5%;
-        opacity: 0;
-        transform: rotate(1260deg);
-    }
-    100% {
-        left: 110%;
-        top: 100%;
-        width: 5%;
-        opacity: 0;
-        transform: rotate(1440deg);
-    }
+.p5-pos-1 {
+    /* Bottom Corner */
+    left: 82%;
+    top: 75%;
+    width: 14%;
+    opacity: 1;
 }
 
-/* Apply animation with 4s offsets for a 16s total loop */
-.p5-disc-1 {
-    animation: conveyor 16s infinite ease-in-out;
-    animation-delay: 0s;
+.p5-pos-2 {
+    /* Center */
+    left: 70%;
+    top: 40%;
+    width: 18%;
+    opacity: 1;
 }
-.p5-disc-2 {
-    animation: conveyor 16s infinite ease-in-out;
-    animation-delay: -4s;
+
+.p5-pos-3 {
+    /* Top */
+    left: 88%;
+    top: 15%;
+    width: 10%;
+    opacity: 1;
 }
-.p5-disc-3 {
-    animation: conveyor 16s infinite ease-in-out;
-    animation-delay: -8s;
+
+.p5-pos-4 {
+    /* Off-screen Top */
+    left: 110%;
+    top: -10%;
+    width: 5%;
+    opacity: 0;
 }
-.p5-disc-4 {
-    animation: conveyor 16s infinite ease-in-out;
-    animation-delay: -12s;
+
+/* Disable transitions for instant teleporting */
+.no-transition {
+    transition: none !important;
+}
+
+/* Page 5 Controls */
+.p5-controls-left,
+.p5-controls-right {
+    position: absolute;
+    bottom: calc(5% + 30px);
+    /* Brought upwards by 20 more pixels (was 10px) */
+    display: flex;
+    gap: 1vw;
+    z-index: 20;
+}
+
+.p5-controls-left {
+    left: 5%;
+}
+
+.p5-controls-left .glass-btn {
+    color: white;
+}
+
+.p5-controls-right {
+    right: 5%;
+}
+
+/* Glassmorphism Buttons (matches page 4 style) */
+.glass-btn {
+    padding: 11px 18px;
+    /* Match #music-player-container size */
+    background: rgba(255, 255, 255, 0.35);
+    /* Increased whiteness */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    color: #ffffff;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-size: 16px;
+    /* A bit bigger and fixed size */
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.glass-btn:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.45);
+    /* Hover gets whiter too */
+}
+
+.glass-btn.icon-btn {
+    padding: 11px 18px;
+    /* Same padding as text buttons to make it a pill shape */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glass-btn.icon-btn img {
+    width: 26px;
+    /* Same width as control-btn */
+    height: 26px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Save button for polaroid image placeholders (pages 2, 3, 4) */
+.polaroid-save-btn {
+    position: absolute;
+    bottom: 0.5vw;
+    left: 0.5vw;
+    padding: 0.4vw 0.8vw;
+    /* smaller padding to fit polaroid */
+    font-size: 0.9vw;
+    /* smaller text to fit polaroid */
+    z-index: 10;
 }
