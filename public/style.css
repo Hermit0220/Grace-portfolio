@@ -854,3 +854,161 @@ body {
     /* smaller text to fit polaroid */
     z-index: 10;
 }
+
+/* ========================================
+   LOGIN OVERLAY — iOS Glassmorphism Style
+   ======================================== */
+
+#login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Full-page frosted glass — exactly like iOS lock screen */
+    backdrop-filter: blur(48px) saturate(180%);
+    -webkit-backdrop-filter: blur(48px) saturate(180%);
+    background: rgba(240, 240, 240, 0.35);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#login-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#login-panel {
+    width: min(420px, 88vw);
+    padding: 44px 40px 40px;
+    border-radius: 28px;
+    /* iOS panel glass effect */
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.10),
+        0 1.5px 0px rgba(255, 255, 255, 0.7) inset,
+        0 -1px 0px rgba(0, 0, 0, 0.06) inset;
+    animation: loginPanelIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes loginPanelIn {
+    from {
+        opacity: 0;
+        transform: scale(0.88) translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+#login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+#login-title {
+    font-family: 'Special Elite', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: rgba(20, 20, 20, 0.88);
+    margin-bottom: 6px;
+}
+
+#login-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(60, 60, 60, 0.65);
+    letter-spacing: 0.01em;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.login-field label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(40, 40, 40, 0.6);
+}
+
+.login-field input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: rgba(20, 20, 20, 0.9);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) inset;
+    cursor: text;
+}
+
+.login-field input::placeholder {
+    color: rgba(80, 80, 80, 0.4);
+}
+
+.login-field input:focus {
+    border-color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.06) inset;
+}
+
+#login-error {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: rgba(180, 40, 40, 0.85);
+    text-align: center;
+    margin-bottom: 10px;
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+}
+
+#login-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 6px;
+    border-radius: 14px;
+    border: none;
+    background: rgba(30, 30, 30, 0.82);
+    color: rgba(255, 255, 255, 0.95);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+#login-btn:hover {
+    background: rgba(10, 10, 10, 0.92);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+}
+
+#login-btn:active {
+    transform: translateY(0px) scale(0.98);
+}

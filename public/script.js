@@ -1,4 +1,170 @@
+// ============================================================
+//  LOGIN SYSTEM — Session, Roles & Inactivity
+// ============================================================
+
+const SESSION_KEY   = 'grace_portfolio_session';
+const INACTIVITY_MS = 10 * 60 * 1000; // 10 minutes
+
+// Admin credentials (client-side only — this is a portfolio site)
+const ADMIN_USER = 'Grace2006';
+const ADMIN_PASS = '2006';
+
+/**
+ * Returns the saved session object, or null if missing / expired.
+ */
+function getValidSession() {
+    try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        const age = Date.now() - (session.lastActivity || 0);
+        if (age > INACTIVITY_MS) {
+            localStorage.removeItem(SESSION_KEY);
+            return null;
+        }
+        return session;
+    } catch { return null; }
+}
+
+/** Save / refresh the session timestamp. */
+function saveSession(role) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+        role,
+        lastActivity: Date.now()
+    }));
+}
+
+/** Wipe the session and show the login overlay. */
+function logout() {
+    localStorage.removeItem(SESSION_KEY);
+    showLoginOverlay();
+}
+
+/** Hide the overlay with a smooth fade then remove from layout. */
+function hideLoginOverlay() {
+    const overlay = document.getElementById('login-overlay');
+    overlay.classList.add('hidden');
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+}
+
+function showLoginOverlay() {
+    const overlay = document.getElementById('login-overlay');
+    overlay.style.display = 'flex';
+    // Force reflow so the CSS transition fires
+    overlay.offsetHeight;
+    overlay.classList.remove('hidden');
+}
+
+/**
+ * Apply role-based UI permissions.
+ * Admin  → all controls visible.
+ * Guest  → upload controls + remove buttons hidden.
+ */
+function applyRole(role) {
+    const isAdmin = role === 'admin';
+    document.querySelectorAll('.upload-content').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+    });
+    document.querySelectorAll('.remove-btn').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+    });
+    document.querySelectorAll('.polaroid-save-btn').forEach(el => {
+        // Only hide save btns for guests; admins keep whatever state they're in
+        if (!isAdmin) el.style.display = 'none';
+    });
+    // Disable click-to-upload for guests
+    document.querySelectorAll('.photo-upload-container').forEach(container => {
+        container.dataset.adminOnly = isAdmin ? 'true' : 'false';
+    });
+}
+
+// --- Inactivity timer ---
+let inactivityTimer = null;
+
+function resetInactivityTimer() {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return; // not logged in — ignore
+    try {
+        const session = JSON.parse(raw);
+        session.lastActivity = Date.now();
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch {}
+
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+        logout();
+    }, INACTIVITY_MS);
+}
+
+// Track user activity on the page
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+});
+
+// --- Boot: check session on every page load ---
+(function bootLoginSystem() {
+    const session = getValidSession();
+    if (session) {
+        // Valid session — skip login, apply role, restart inactivity timer
+        hideLoginOverlay();
+        // Wait for DOM photo containers to exist before applying role
+        document.addEventListener('DOMContentLoaded', () => applyRole(session.role));
+        resetInactivityTimer();
+    } else {
+        showLoginOverlay();
+    }
+})();
+
+// --- Login form submission ---
 document.addEventListener('DOMContentLoaded', () => {
+    const form       = document.getElementById('login-form');
+    const usernameEl = document.getElementById('login-username');
+    const passwordEl = document.getElementById('login-password');
+    const errorEl    = document.getElementById('login-error');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = usernameEl.value.trim();
+        const password = passwordEl.value;
+
+        // Require at least something in both fields
+        if (!username || !password) {
+            showError('Please fill in both fields.');
+            return;
+        }
+
+        let role;
+        if (username === ADMIN_USER && password === ADMIN_PASS) {
+            role = 'admin';
+        } else {
+            // Any other non-empty credentials → guest
+            role = 'guest';
+        }
+
+        // Save session & dismiss overlay
+        saveSession(role);
+        applyRole(role);
+        hideLoginOverlay();
+        resetInactivityTimer();
+
+        // Clear fields for security
+        usernameEl.value = '';
+        passwordEl.value = '';
+        errorEl.style.display = 'none';
+    });
+
+    function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+        // Re-trigger shake animation
+        errorEl.style.animation = 'none';
+        errorEl.offsetHeight;
+        errorEl.style.animation = '';
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+
     const parallaxElements = document.querySelectorAll('.parallax');
 
     window.addEventListener('scroll', () => {
@@ -48,8 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const removeBtn = container.querySelector('.remove-btn');
         const saveBtn = container.querySelector('.polaroid-save-btn');
 
-        // Clicking the container triggers the hidden file input
+        // Clicking the container triggers the hidden file input (admin only)
         container.addEventListener('click', () => {
+            if (container.dataset.adminOnly === 'false') return; // guests: no-op
             fileInput.click();
         });
 

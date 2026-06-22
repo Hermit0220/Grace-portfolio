@@ -10,6 +10,29 @@
 
 <body>
 
+    <!-- ===== LOGIN OVERLAY ===== -->
+    <div id="login-overlay">
+        <div id="login-panel">
+            <div id="login-header">
+                <h1 id="login-title">Welcome</h1>
+                <p id="login-subtitle">Enter your credentials to continue</p>
+            </div>
+            <form id="login-form" autocomplete="off">
+                <div class="login-field">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter username" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="login-field">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password" autocomplete="off">
+                </div>
+                <p id="login-error" style="display:none;">Invalid credentials. Please try again.</p>
+                <button type="submit" id="login-btn">Enter</button>
+            </form>
+        </div>
+    </div>
+    <!-- ===== END LOGIN OVERLAY ===== -->
+
     <div class="landing-page">
         <!-- Music Player -->
         <div id="music-player-container">
