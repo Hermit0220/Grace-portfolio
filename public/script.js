@@ -16,16 +16,22 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(photos => {
             if (Array.isArray(photos)) {
                 photos.forEach(photo => {
-                    const container = document.querySelector(`.${photo.slotId}`);
+                    // slotId maps to a CSS class on the container (e.g. "photo-1")
+                    const container = document.querySelector(`.upload-container.${photo.slotId}`) 
+                                   || document.querySelector(`.${photo.slotId}`);
                     if (container) {
                         const uploadContent = container.querySelector('.upload-content');
+                        const uploadedImg = container.querySelector('.uploaded-img');
                         const removeBtn = container.querySelector('.remove-btn');
                         const saveBtn = container.querySelector('.polaroid-save-btn');
-                        uploadContent.style.display = 'none';
-                        uploadedImg.src = photo.imageData;
-                        uploadedImg.style.display = 'block';
+
+                        if (uploadedImg) {
+                            uploadedImg.src = photo.imageData;
+                            uploadedImg.style.display = 'block';
+                        }
+                        if (uploadContent) uploadContent.style.display = 'none';
                         if (removeBtn) removeBtn.style.display = 'block';
-                        if (saveBtn) saveBtn.style.display = 'block';
+                        if (saveBtn) saveBtn.style.display = 'none'; // already saved, hide save btn
                     }
                 });
             }
