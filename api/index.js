@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const multer = require('multer');
@@ -9,7 +8,7 @@ const path = require('path');
 
 dotenv.config();
 
-// Configure Cloudinary
+// Configure Cloudinary - supports both CLOUDINARY_URL and individual vars
 if (process.env.CLOUDINARY_CLOUD_NAME) {
     cloudinary.config({ 
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
@@ -17,6 +16,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
       api_secret: process.env.CLOUDINARY_API_SECRET 
     });
 }
+// If CLOUDINARY_URL is set, the cloudinary SDK picks it up automatically
 
 const app = express();
 app.use(cors());
@@ -29,110 +29,115 @@ const upload = multer({ storage: storage });
 // Serve static files from public directory (useful for local dev)
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Connect to MongoDB
-if (!process.env.MONGO_URI) {
-    console.error("🚨 CRITICAL ERROR: MONGO_URI is completely missing from Vercel Environment Variables! The API cannot start.");
-} else {
-    mongoose.connect(process.env.MONGO_URI)
-      .then(() => console.log('MongoDB connected'))
-      .catch(err => console.error('MongoDB connection error:', err));
+// Helper: extract Cloudinary public_id from a secure_url
+function getPublicId(imageUrl) {
+    if (!imageUrl) return null;
+    // Matches /upload/v12345/folder/filename.ext and extracts 'folder/filename'
+    const match = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+    return match ? match[1] : null;
 }
 
-// Define Schema
-const photoSchema = new mongoose.Schema({
-    slotId: { type: String, required: true, unique: true },
-    imageData: { type: String, required: true } // Now stores Cloudinary secure_url
-});
-const Photo = mongoose.model('Photo', photoSchema);
-
-// Helper function to move images to User_Removed folder
+// Helper: move an image to User_Removed folder in Cloudinary
 async function moveImageToRemoved(imageUrl) {
     if (!imageUrl) return;
     try {
-        const match = imageUrl.match(/\/v\d+\/(.+)\.\w+$/);
-        if (match && match[1]) {
-            const oldPublicId = match[1];
+        const oldPublicId = getPublicId(imageUrl);
+        if (oldPublicId) {
             const filename = oldPublicId.split('/').pop();
             const newPublicId = `User_Removed/${filename}`;
             await cloudinary.uploader.rename(oldPublicId, newPublicId);
-            console.log(`Moved ${oldPublicId} to ${newPublicId}`);
+            console.log(`Moved ${oldPublicId} -> ${newPublicId}`);
         }
     } catch (err) {
-        console.error("Failed to move image to User_Removed:", err);
+        // Non-fatal — log but don't crash
+        console.error('Failed to move image to User_Removed:', err.message);
     }
 }
 
-// API Routes
+// GET /api/photos
+// Lists all images from the User/ folder in Cloudinary
 app.get('/api/photos', async (req, res) => {
-    if (!process.env.MONGO_URI) {
-        return res.status(500).json({ error: "CRITICAL: MONGO_URI is missing from Vercel Environment Variables. Please add it and Redeploy." });
-    }
     try {
-        const photos = await Photo.find();
+        const result = await cloudinary.api.resources({
+            type: 'upload',
+            prefix: 'User/',
+            max_results: 100
+        });
+
+        // Return in same shape the frontend expects: [{ slotId, imageData }]
+        // slotId is encoded as the filename (e.g. "User/photo-2" -> slotId "photo-2")
+        const photos = result.resources.map(r => ({
+            slotId: r.public_id.replace('User/', ''),
+            imageData: r.secure_url
+        }));
+
         res.json(photos);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Upload Endpoint: Expects FormData with 'slotId' and 'file'
+// POST /api/upload
+// Uploads an image to Cloudinary under the User/ folder
+// Body: FormData with 'slotId' (string) and 'file' (image file)
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     try {
         const { slotId } = req.body;
-        
+
         if (!slotId || !req.file) {
             return res.status(400).json({ error: 'Missing slotId or file' });
         }
 
-        // If a photo already exists in this slot, move the old one to User_Removed
-        const existingPhoto = await Photo.findOne({ slotId });
-        if (existingPhoto) {
-            await moveImageToRemoved(existingPhoto.imageData);
+        // Check if an existing image for this slotId exists in Cloudinary
+        try {
+            const existing = await cloudinary.api.resource(`User/${slotId}`);
+            if (existing) {
+                // Move old image to User_Removed before uploading new one
+                await moveImageToRemoved(existing.secure_url);
+            }
+        } catch (e) {
+            // Resource doesn't exist yet — that's fine, just proceed
         }
 
-        // Upload Buffer to Cloudinary via stream
-        const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "User", resource_type: "auto" }, // resource_type 'auto' supports audio/video later
-            async (error, result) => {
-                if (error) return res.status(500).json({ error: error.message });
+        // Upload new image buffer to Cloudinary
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { 
+                    folder: 'User',
+                    public_id: slotId,   // Use slotId as filename for easy lookup
+                    overwrite: true,
+                    resource_type: 'auto'
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
 
-                // Save Cloudinary URL to MongoDB
-                const secure_url = result.secure_url;
-                
-                const photo = await Photo.findOneAndUpdate(
-                    { slotId },
-                    { imageData: secure_url },
-                    { new: true, upsert: true }
-                );
-                
-                res.json(photo);
-            }
-        );
+            const readableStream = new Readable();
+            readableStream.push(req.file.buffer);
+            readableStream.push(null);
+            readableStream.pipe(uploadStream);
+        });
 
-        // Pipe the buffer to Cloudinary
-        const readableStream = new Readable();
-        readableStream.push(req.file.buffer);
-        readableStream.push(null);
-        readableStream.pipe(uploadStream);
+        res.json({ slotId, imageData: uploadResult.secure_url });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Delete Endpoint
+// DELETE /api/photos/:slotId
+// Moves the image from User/ to User_Removed/ in Cloudinary
 app.delete('/api/photos/:slotId', async (req, res) => {
     try {
         const { slotId } = req.params;
-        const photo = await Photo.findOneAndDelete({ slotId });
-        if (!photo) {
-            return res.status(404).json({ error: 'Photo not found' });
-        }
 
-        // Move the removed image to the User_Removed folder in Cloudinary
-        await moveImageToRemoved(photo.imageData);
+        // Get the resource first so we have its URL
+        const existing = await cloudinary.api.resource(`User/${slotId}`);
+        await moveImageToRemoved(existing.secure_url);
 
-        res.json({ message: 'Deleted successfully' });
+        res.json({ message: 'Moved to User_Removed successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
