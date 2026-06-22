@@ -10,15 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
             el.style.transform = `translateY(${scrolled * speed}px)`;
         });
     });
-    // Fetch existing photos on load
+    // Fetch existing photos on load and restore them to their exact slots
     fetch('/api/photos')
         .then(res => res.json())
         .then(photos => {
             if (Array.isArray(photos)) {
                 photos.forEach(photo => {
-                    // slotId maps to a CSS class on the container (e.g. "photo-1")
-                    const container = document.querySelector(`.upload-container.${photo.slotId}`) 
-                                   || document.querySelector(`.${photo.slotId}`);
+                    // Use data-slot attribute for exact, reliable slot matching
+                    const container = document.querySelector(`[data-slot="${photo.slotId}"]`);
                     if (container) {
                         const uploadContent = container.querySelector('.upload-content');
                         const uploadedImg = container.querySelector('.uploaded-img');
@@ -31,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         if (uploadContent) uploadContent.style.display = 'none';
                         if (removeBtn) removeBtn.style.display = 'block';
-                        if (saveBtn) saveBtn.style.display = 'none'; // already saved, hide save btn
+                        if (saveBtn) saveBtn.style.display = 'none';
                     }
                 });
             }
@@ -57,22 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle remove button click
         if (removeBtn) {
             removeBtn.addEventListener('click', (event) => {
-                event.stopPropagation(); // Stop click from bubbling up to the container
+                event.stopPropagation();
 
-                const slotClass = Array.from(container.classList).find(c => c.startsWith('photo-'));
-                if (slotClass) {
-                    // Update UI instantly
-                    uploadedImg.style.display = 'none';
-                    uploadedImg.src = '';
-                    if (removeBtn) removeBtn.style.display = 'none';
-                    if (saveBtn) saveBtn.style.display = 'none';
-                    uploadContent.style.display = 'flex';
-                    fileInput.value = ''; // reset
-                    currentSelectedFile = null;
+                const slotId = container.dataset.slot; // use data-slot for reliable ID
+                
+                // Update UI instantly
+                uploadedImg.style.display = 'none';
+                uploadedImg.src = '';
+                if (removeBtn) removeBtn.style.display = 'none';
+                if (saveBtn) saveBtn.style.display = 'none';
+                uploadContent.style.display = 'flex';
+                fileInput.value = '';
+                currentSelectedFile = null;
 
-                    fetch(`/api/photos/${slotClass}`, {
+                if (slotId) {
+                    fetch(`/api/photos/${slotId}`, {
                         method: 'DELETE'
-                    }).catch(err => console.error('Error deleting photo:', err));
+                    }).catch(err => console.error('Error removing photo:', err));
                 }
             });
         }
@@ -104,24 +104,25 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle save button click
         if (saveBtn) {
             saveBtn.addEventListener('click', (event) => {
-                event.stopPropagation(); // Stop click from bubbling up to the container
+                event.stopPropagation();
                 if (!currentSelectedFile) return;
 
-                const slotClass = Array.from(container.classList).find(c => c.startsWith('photo-'));
-                if (slotClass) {
+                const slotId = container.dataset.slot; // use data-slot for reliable ID
+                if (slotId) {
                     saveBtn.textContent = 'Saving...';
                     saveBtn.disabled = true;
 
                     const formData = new FormData();
-                    formData.append('slotId', slotClass);
+                    formData.append('slotId', slotId);
                     formData.append('file', currentSelectedFile);
 
                     fetch('/api/upload', {
                         method: 'POST',
-                        body: formData // Send the raw file to the Express server!
+                        body: formData
                     })
                         .then(res => res.json())
                         .then(data => {
+                            if (data.error) throw new Error(data.error);
                             saveBtn.textContent = 'Saved!';
                             setTimeout(() => {
                                 saveBtn.style.display = 'none';
@@ -129,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             currentSelectedFile = null;
                         })
                         .catch(err => {
-                            console.error('Error uploading photo to DB:', err);
+                            console.error('Error saving photo:', err);
                             saveBtn.textContent = 'Error';
                             saveBtn.disabled = false;
                         });
