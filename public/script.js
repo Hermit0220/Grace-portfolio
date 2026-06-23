@@ -680,8 +680,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             trackMeta.push(newMeta);
                             tracks.push(data.url);
 
-                            // Default note for new track
-                            trackNotes.push({ heading: displayName, body: '' });
+                            // We intentionally do NOT push to trackNotes here.
+                            // This allows displayTrackNote to fall back to an empty note,
+                            // showing the default HTML placeholders as requested.
 
                             // Save updated custom track list to Cloudinary
                             saveTrackList();
