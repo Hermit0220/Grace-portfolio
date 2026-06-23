@@ -226,18 +226,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch existing Page 4 note on load
     const p4Textarea = document.getElementById('p4-note-textarea');
-    const p4SaveBtn = document.getElementById('p4-note-save-btn');
-    
+    const p4SaveBtn  = document.getElementById('p4-note-save-btn');
+
     if (p4Textarea) {
         fetch('/api/note')
             .then(res => res.json())
             .then(data => {
                 if (data.url) {
-                    // Fetch the actual text from the Cloudinary raw file URL
-                    fetch(data.url)
+                    // Cache-buster prevents stale Cloudinary CDN responses
+                    fetch(data.url + '?_cb=' + Date.now())
                         .then(r => r.text())
                         .then(text => {
-                            p4Textarea.value = text;
+                            // If saved text is empty, leave the textarea blank (shows placeholder)
+                            p4Textarea.value = text.trim();
                         })
                         .catch(err => console.error('Error reading note text:', err));
                 }
@@ -248,18 +249,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle Page 4 Note Save
     if (p4SaveBtn && p4Textarea) {
         p4SaveBtn.addEventListener('click', () => {
+            const textToSave = p4Textarea.value; // preserve whitespace for saving
             p4SaveBtn.textContent = 'Saving...';
             p4SaveBtn.disabled = true;
 
             fetch('/api/note', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: p4Textarea.value })
+                body: JSON.stringify({ text: textToSave })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     p4SaveBtn.textContent = 'Saved!';
+                    // If the user cleared everything, reset textarea so placeholder reappears
+                    if (textToSave.trim() === '') {
+                        p4Textarea.value = '';
+                    }
                     setTimeout(() => {
                         p4SaveBtn.textContent = 'Save';
                         p4SaveBtn.disabled = false;
@@ -655,7 +661,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
         if (nextTrackBtn) nextTrackBtn.addEventListener('click', window.playNextTrack);
-        if (p5NextBtn)    p5NextBtn.addEventListener('click', window.playNextTrack);
+        if (p5NextBtn) {
+            p5NextBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                this.disabled = true;
+                window.playNextTrack();
+                setTimeout(() => { this.disabled = false; }, 2000);
+            });
+        }
 
         if (audioSlider) {
             audioSlider.addEventListener('input', (e) => {

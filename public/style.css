@@ -399,8 +399,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 27px;
+    height: 27px;
     transition: transform 0.2s ease, opacity 0.2s ease;
     opacity: 0.8;
 }
@@ -411,33 +411,33 @@ body {
 }
 
 .control-btn img {
-    width: 19px;
-    height: 19px;
+    width: 18px;
+    height: 18px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 #play-pause-btn img,
 #next-icon {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
 }
 
 #next-icon {
     opacity: 0.67;
-    height: 19px;
-    width: 19px;
+    height: 18px;
+    width: 18px;
 }
 
 #pause-icon {
-    width: 35px;
-    height: 35px;
+    width: 34px;
+    height: 34px;
 }
 
 /* Glassmorphic Slider */
 .slider-wrapper {
     position: relative;
     width: 0px;
-    height: 26px;
+    height: 24px;
     display: flex;
     align-items: center;
     opacity: 0;
@@ -491,8 +491,8 @@ body {
 #audio-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: transparent;
     border: 2px solid rgba(255, 255, 255, 0.8);
@@ -828,8 +828,8 @@ body {
 
 /* Per-track Save Note button — mirrors page 4 glassmorphic style */
 .p5-note-save-btn {
-    margin-top: -20px;
-    padding: 0.35vw 1.4vw;
+    margin-top: -40px;
+    padding: 1.4vw;
     border-radius: 50px;
     border: 1px solid rgba(255, 255, 255, 0.45);
     background: rgba(255, 255, 255, 0.18);
@@ -840,7 +840,6 @@ body {
     font-size: 1vw;
     color: #5a1a1a;
     letter-spacing: 0.06em;
-    cursor: pointer;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     white-space: nowrap;
 }
@@ -954,10 +953,10 @@ body {
 .p5-controls-right {
     position: absolute;
     bottom: calc(5% + 30px);
-    /* Brought upwards by 20 more pixels (was 10px) */
     display: flex;
     gap: 1vw;
     z-index: 20;
+    pointer-events: auto;
 }
 
 .p5-controls-left {
@@ -974,10 +973,8 @@ body {
 
 /* Glassmorphism Buttons (matches page 4 style) */
 .glass-btn {
-    padding: 11px 18px;
-    /* Match #music-player-container size */
+    padding: 13px 20px;
     background: rgba(255, 255, 255, 0.35);
-    /* Increased whiteness */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: 50px;
@@ -985,9 +982,9 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     color: #ffffff;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    font-size: 16px;
-    /* A bit bigger and fixed size */
+    font-size: 17px;
     cursor: pointer;
+    pointer-events: auto;
     transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -998,17 +995,15 @@ body {
 }
 
 .glass-btn.icon-btn {
-    padding: 11px 18px;
-    /* Same padding as text buttons to make it a pill shape */
+    padding: 13px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .glass-btn.icon-btn img {
-    width: 26px;
-    /* Same width as control-btn */
-    height: 26px;
+    width: 22px;
+    height: 22px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
