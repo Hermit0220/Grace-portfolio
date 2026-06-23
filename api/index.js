@@ -67,23 +67,46 @@ async function moveImageToRemoved(imageUrl) {
     }
 }
 
+// Helper: fetch or initialize photo list
+async function getPhotoList() {
+    try {
+        const result = await cloudinary.api.resource('User/notes/photo-list', { resource_type: 'raw' });
+        const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
+        return JSON.parse(text);
+    } catch (e) {
+        // Fallback: build list from existing files if JSON doesn't exist yet
+        const result = await cloudinary.api.resources({ type: 'upload', prefix: 'User/', max_results: 100 });
+        return result.resources
+            .filter(r => r.public_id.match(/photo-\d+/))
+            .map(r => ({
+                slotId: r.public_id.replace('User/', ''),
+                imageData: r.secure_url
+            }));
+    }
+}
+
+// Helper: save photo list to Cloudinary
+async function savePhotoList(photos) {
+    const json = JSON.stringify(photos);
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'User/notes', public_id: 'photo-list', overwrite: true, resource_type: 'raw' },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            }
+        );
+        const rs = new Readable();
+        rs.push(Buffer.from(json, 'utf-8'));
+        rs.push(null);
+        rs.pipe(uploadStream);
+    });
+}
+
 // GET /api/photos
-// Lists all images from the User/ folder in Cloudinary
 app.get('/api/photos', async (req, res) => {
     try {
-        const result = await cloudinary.api.resources({
-            type: 'upload',
-            prefix: 'User/',
-            max_results: 100
-        });
-
-        // Return in same shape the frontend expects: [{ slotId, imageData }]
-        // slotId is encoded as the filename (e.g. "User/photo-2" -> slotId "photo-2")
-        const photos = result.resources.map(r => ({
-            slotId: r.public_id.replace('User/', ''),
-            imageData: r.secure_url
-        }));
-
+        const photos = await getPhotoList();
         res.json(photos);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -91,66 +114,50 @@ app.get('/api/photos', async (req, res) => {
 });
 
 // POST /api/upload
-// Uploads an image to Cloudinary under the User/ folder
-// Body: FormData with 'slotId' (string) and 'file' (image file)
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     try {
         const { slotId } = req.body;
-
-        if (!slotId || !req.file) {
-            return res.status(400).json({ error: 'Missing slotId or file' });
-        }
-
-        // Check if an existing image for this slotId exists in Cloudinary
-        try {
-            const existing = await cloudinary.api.resource(`User/${slotId}`);
-            if (existing) {
-                // Move old image to User_Removed before uploading new one
-                await moveImageToRemoved(existing.secure_url);
-            }
-        } catch (e) {
-            // Resource doesn't exist yet — that's fine, just proceed
-        }
+        if (!slotId || !req.file) return res.status(400).json({ error: 'Missing slotId or file' });
 
         // Upload new image buffer to Cloudinary
         const uploadResult = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
-                { 
-                    folder: 'User',
-                    public_id: slotId,   // Use slotId as filename for easy lookup
-                    overwrite: true,
-                    resource_type: 'auto'
-                },
+                { folder: 'User', public_id: slotId, overwrite: true, resource_type: 'auto' },
                 (error, result) => {
                     if (error) reject(error);
                     else resolve(result);
                 }
             );
-
-            const readableStream = new Readable();
-            readableStream.push(req.file.buffer);
-            readableStream.push(null);
-            readableStream.pipe(uploadStream);
+            const rs = new Readable();
+            rs.push(req.file.buffer);
+            rs.push(null);
+            rs.pipe(uploadStream);
         });
 
-        res.json({ slotId, imageData: uploadResult.secure_url });
+        // Update photo list
+        let photos = await getPhotoList();
+        photos = photos.filter(p => p.slotId !== slotId); // remove old entry if exists
+        photos.push({ slotId, imageData: uploadResult.secure_url });
+        await savePhotoList(photos);
 
+        res.json({ slotId, imageData: uploadResult.secure_url });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // DELETE /api/photos/:slotId
-// Moves the image from User/ to User_Removed/ in Cloudinary
+// Removes the image from the website's JSON list, without deleting the file from Cloudinary database
 app.delete('/api/photos/:slotId', async (req, res) => {
     try {
         const { slotId } = req.params;
+        let photos = await getPhotoList();
+        
+        // Remove from the website's display list
+        photos = photos.filter(p => p.slotId !== slotId);
+        await savePhotoList(photos);
 
-        // Get the resource first so we have its URL
-        const existing = await cloudinary.api.resource(`User/${slotId}`);
-        await moveImageToRemoved(existing.secure_url);
-
-        res.json({ message: 'Moved to User_Removed successfully' });
+        res.json({ message: 'Removed from website successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
