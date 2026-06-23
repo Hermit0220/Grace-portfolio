@@ -534,8 +534,8 @@ body {
     z-index: 4;
     left: 54.38%;
     top: 6.30%;
-    width: 45.10%;
-    height: 83.52%;
+    width: 48.10%;
+    height: 86.52%;
 }
 
 .p4-frames {
@@ -556,6 +556,121 @@ body {
     height: 81.20%;
     pointer-events: none;
 }
+
+/* ── Note textarea over the crinkled paper ── */
+.p4-note-wrapper {
+    position: absolute;
+    /* Sits over the crinkled paper which lives inside the p4-text image.
+       p4-text: left 54.38%, top 6.30%, w 45.10%, h 83.52%.
+       The paper itself occupies roughly the lower-center 60% of that image. */
+    left: 66%;
+    top: 38%;
+    width: 28%;
+    height: 42%;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2%;
+    pointer-events: auto;
+    transform: translateX(20px) rotate(-13.5deg);
+    animation: p4-note-float 6s ease-in-out infinite;
+}
+
+@keyframes p4-note-float {
+    0% {
+        transform: translateX(20px) rotate(-13.5deg) translateY(0px);
+    }
+
+    50% {
+        transform: translateX(20px) rotate(-13.5deg) translateY(-10px);
+    }
+
+    100% {
+        transform: translateX(20px) rotate(-13.5deg) translateY(0px);
+    }
+}
+
+.p4-note-textarea {
+    width: 26ch;
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    /* Match page 5 body text style exactly */
+    font-family: 'Special Elite', 'Courier New', Courier, monospace;
+    font-size: 1.5vw;
+    font-weight: normal;
+    color: #5a1a1a;
+    letter-spacing: 0.08em;
+    line-height: 1.6;
+    text-align: center;
+    padding: 15% 4% 2% 4%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 80, 80, 0.5) transparent;
+}
+
+.p4-note-textarea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.p4-note-textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.p4-note-textarea::-webkit-scrollbar-thumb {
+    background: rgba(130, 80, 80, 0.5);
+    border-radius: 4px;
+}
+
+.p4-note-textarea::placeholder {
+    color: rgba(100, 58, 58, 0.4);
+
+}
+
+/* Guest: textarea is read-only but still visible */
+.p4-note-textarea[readonly] {
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Glassmorphic save button — same language as the rest of the site */
+.p4-note-save-btn {
+
+    padding: 0.4vw 1.6vw;
+    margin-top: 30px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-family: 'Special Elite', serif;
+    font-size: 1vw;
+    color: #5a1a1a;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+
+.p4-note-save-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+}
+
+.p4-note-save-btn:active {
+    transform: scale(0.97);
+}
+
+/* Hide save button for guests (controlled via JS role) */
+.p4-note-save-btn.hidden-for-guest {
+    display: none;
+}
+
 
 /* Approximate frame coordinates for 4th page (fine-tune as needed) */
 .photo-9 {
@@ -899,6 +1014,7 @@ body {
         opacity: 0;
         transform: scale(0.88) translateY(24px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -955,7 +1071,7 @@ body {
     color: rgba(20, 20, 20, 0.9);
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06) inset;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) inset;
     cursor: text;
 }
 
@@ -966,7 +1082,7 @@ body {
 .login-field input:focus {
     border-color: rgba(255, 255, 255, 0.9);
     background: rgba(255, 255, 255, 0.55);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.06) inset;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.06) inset;
 }
 
 #login-error {
@@ -979,11 +1095,27 @@ body {
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%       { transform: translateX(-6px); }
-    40%       { transform: translateX(6px); }
-    60%       { transform: translateX(-4px); }
-    80%       { transform: translateX(4px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-6px);
+    }
+
+    40% {
+        transform: translateX(6px);
+    }
+
+    60% {
+        transform: translateX(-4px);
+    }
+
+    80% {
+        transform: translateX(4px);
+    }
 }
 
 #login-btn {
@@ -1000,13 +1132,13 @@ body {
     letter-spacing: 0.04em;
     cursor: pointer;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 
 #login-btn:hover {
     background: rgba(10, 10, 10, 0.92);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
 }
 
 #login-btn:active {

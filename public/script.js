@@ -76,6 +76,19 @@ function applyRole(role) {
     document.querySelectorAll('.photo-upload-container').forEach(container => {
         container.dataset.adminOnly = isAdmin ? 'true' : 'false';
     });
+
+    // Page 4 Note permissions
+    document.querySelectorAll('.admin-only-element').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+    });
+    const p4Textarea = document.getElementById('p4-note-textarea');
+    if (p4Textarea) {
+        if (isAdmin) {
+            p4Textarea.removeAttribute('readonly');
+        } else {
+            p4Textarea.setAttribute('readonly', 'true');
+        }
+    }
 }
 
 // --- Inactivity timer ---
@@ -202,6 +215,61 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })
         .catch(err => console.error('Error fetching photos:', err));
+
+    // Fetch existing Page 4 note on load
+    const p4Textarea = document.getElementById('p4-note-textarea');
+    const p4SaveBtn = document.getElementById('p4-note-save-btn');
+    
+    if (p4Textarea) {
+        fetch('/api/note')
+            .then(res => res.json())
+            .then(data => {
+                if (data.url) {
+                    // Fetch the actual text from the Cloudinary raw file URL
+                    fetch(data.url)
+                        .then(r => r.text())
+                        .then(text => {
+                            p4Textarea.value = text;
+                        })
+                        .catch(err => console.error('Error reading note text:', err));
+                }
+            })
+            .catch(err => console.error('Error fetching note URL:', err));
+    }
+
+    // Handle Page 4 Note Save
+    if (p4SaveBtn && p4Textarea) {
+        p4SaveBtn.addEventListener('click', () => {
+            p4SaveBtn.textContent = 'Saving...';
+            p4SaveBtn.disabled = true;
+
+            fetch('/api/note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: p4Textarea.value })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    p4SaveBtn.textContent = 'Saved!';
+                    setTimeout(() => {
+                        p4SaveBtn.textContent = 'Save';
+                        p4SaveBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            })
+            .catch(err => {
+                console.error('Error saving note:', err);
+                p4SaveBtn.textContent = 'Error';
+                setTimeout(() => {
+                    p4SaveBtn.textContent = 'Save';
+                    p4SaveBtn.disabled = false;
+                }, 2000);
+            });
+        });
+    }
 
     // Photo upload logic
     const uploadContainers = document.querySelectorAll('.photo-upload-container');
@@ -397,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         "audio/Michael Jackson - Human Nature (Audio).mp3",
         "audio/Sade - Like a Tattoo (Audio).mp3",
         "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",
+        "audio/Still With You.mp3",
         "audio/Flatline.mp3",
         "audio/Excitement.mp3",
         "audio/Guns N' Roses - November Rain (Lyrics).mp3",

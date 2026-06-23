@@ -143,6 +143,50 @@ app.delete('/api/photos/:slotId', async (req, res) => {
     }
 });
 
+// GET /api/note
+// Returns the Cloudinary URL for the raw text note (if it exists)
+app.get('/api/note', async (req, res) => {
+    try {
+        const result = await cloudinary.api.resource('User/p4-note.txt', { resource_type: 'raw' });
+        res.json({ url: result.secure_url });
+    } catch (err) {
+        // If it doesn't exist, just return null URL
+        res.json({ url: null });
+    }
+});
+
+// POST /api/note
+// Uploads a raw text buffer to Cloudinary as User/p4-note.txt
+app.post('/api/note', async (req, res) => {
+    try {
+        const { text } = req.body;
+        
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { 
+                    folder: 'User',
+                    public_id: 'p4-note.txt',
+                    overwrite: true,
+                    resource_type: 'raw'
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+
+            const readableStream = new Readable();
+            readableStream.push(Buffer.from(text || '', 'utf-8'));
+            readableStream.push(null);
+            readableStream.pipe(uploadStream);
+        });
+
+        res.json({ success: true, url: uploadResult.secure_url });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
