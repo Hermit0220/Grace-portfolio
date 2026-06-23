@@ -592,32 +592,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formData = new FormData();
                 formData.append('file', file);
 
-                fetch('/api/add-track', { method: 'POST', body: formData })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Append to live track list
-                            tracks.push(data.url);
-                            // Create default note entry for the new track
-                            const rawName = data.originalName.replace(/\.[^/.]+$/, '');
-                            trackNotes.push({
-                                heading: rawName.toUpperCase().substring(0, 28),
-                                body: ''
-                            });
+                fetch('/api/sign-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: file.name })
+                })
+                .then(res => res.json())
+                .then(signData => {
+                    if (signData.error) throw new Error(signData.error);
 
-                            p5SaveBtn.textContent = 'Saved!';
-                            setTimeout(() => {
-                                p5SaveBtn.style.display = 'none';
-                                p5SaveBtn.textContent   = 'Save Track';
-                                p5SaveBtn.disabled      = false;
-                                p5FileInput.value       = '';
-                            }, 2000);
-                        } else {
-                            throw new Error(data.error || 'Upload failed');
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Add track error:', err);
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('api_key', signData.apiKey);
+                    fd.append('timestamp', signData.timestamp);
+                    fd.append('signature', signData.signature);
+                    fd.append('folder', signData.folder);
+                    fd.append('public_id', signData.public_id);
+
+                    // Upload directly to Cloudinary bypassing Vercel limits
+                    return fetch(`https://api.cloudinary.com/v1_1/${signData.cloudName}/video/upload`, {
+                        method: 'POST',
+                        body: fd
+                    }).then(res => res.json()).then(uploadData => ({
+                        uploadData,
+                        originalName: file.name
+                    }));
+                })
+                .then(({ uploadData, originalName }) => {
+                    if (uploadData.error) {
+                        throw new Error(uploadData.error.message || 'Upload failed');
+                    }
+                    
+                    // Append to live track list
+                    tracks.push(uploadData.secure_url);
+                    // Create default note entry for the new track
+                    const rawName = originalName.replace(/\.[^/.]+$/, '');
+                    trackNotes.push({
+                        heading: rawName.toUpperCase().substring(0, 28),
+                        body: ''
+                    });
+
+                    p5SaveBtn.textContent = 'Saved!';
+                    setTimeout(() => {
+                        p5SaveBtn.style.display = 'none';
+                        p5SaveBtn.textContent   = 'Save Track';
+                        p5SaveBtn.disabled      = false;
+                        p5FileInput.value       = '';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Add track error:', err);
                         p5SaveBtn.textContent = 'Error';
                         p5SaveBtn.disabled    = false;
                         setTimeout(() => { p5SaveBtn.textContent = 'Save Track'; }, 4000);

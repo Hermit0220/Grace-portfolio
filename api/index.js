@@ -189,7 +189,9 @@ app.post('/api/note', async (req, res) => {
             );
 
             const readableStream = new Readable();
-            readableStream.push(Buffer.from(text || '', 'utf-8'));
+            // Cloudinary rejects 0-byte files, so write a single space if text is empty
+            const safeText = (text && text.trim().length > 0) ? text : ' ';
+            readableStream.push(Buffer.from(safeText, 'utf-8'));
             readableStream.push(null);
             readableStream.pipe(uploadStream);
         });
@@ -248,37 +250,33 @@ app.post('/api/track-notes', async (req, res) => {
     }
 });
 
-// POST /api/add-track
-// Uploads an audio file to Cloudinary (resource_type: video) and returns its URL.
-app.post('/api/add-track', upload.single('file'), async (req, res) => {
+// POST /api/sign-upload
+// Generates a Cloudinary signature so the client can upload directly without hitting Vercel's 4.5MB limit
+app.post('/api/sign-upload', express.json(), (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file provided' });
+        const { filename } = req.body;
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename is required' });
         }
 
-        const originalName = req.file.originalname.replace(/\.[^/.]+$/, '');
-        const safeId = originalName.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
+        const safeId = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
+        const timestamp = Math.round((new Date).getTime() / 1000);
+        const folder = 'User/audio';
 
-        const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    folder: 'User/audio',
-                    public_id: safeId,
-                    overwrite: false,
-                    resource_type: 'video'  // Cloudinary treats audio as video
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
-            const rs = new Readable();
-            rs.push(req.file.buffer);
-            rs.push(null);
-            rs.pipe(uploadStream);
+        const signature = cloudinary.utils.api_sign_request({
+            timestamp: timestamp,
+            folder: folder,
+            public_id: safeId
+        }, process.env.CLOUDINARY_API_SECRET);
+
+        res.json({
+            signature,
+            timestamp,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            folder,
+            public_id: safeId
         });
-
-        res.json({ success: true, url: uploadResult.secure_url, originalName: req.file.originalname });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
