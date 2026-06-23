@@ -5,6 +5,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
 const path = require('path');
+const https = require('https');
 
 dotenv.config();
 
@@ -35,6 +36,18 @@ function getPublicId(imageUrl) {
     // Matches /upload/v12345/folder/filename.ext and extracts 'folder/filename'
     const match = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
     return match ? match[1] : null;
+}
+
+// Helper: fetch URL content as text (node built-in https)
+function fetchUrl(url) {
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            let data = '';
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => resolve(data));
+            res.on('error', reject);
+        }).on('error', reject);
+    });
 }
 
 // Helper: move an image to User_Removed folder in Cloudinary
@@ -182,6 +195,90 @@ app.post('/api/note', async (req, res) => {
         });
 
         res.json({ success: true, url: uploadResult.secure_url });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/track-notes
+// Returns the full per-track notes JSON array from Cloudinary.
+// Falls back to empty array if not seeded yet.
+app.get('/api/track-notes', async (req, res) => {
+    try {
+        const result = await cloudinary.api.resource('User/notes/track-notes', { resource_type: 'raw' });
+        // Append cache-buster to avoid stale CDN responses
+        const bust = `?_cb=${Date.now()}`;
+        const text = await fetchUrl(result.secure_url + bust);
+        res.json(JSON.parse(text));
+    } catch (err) {
+        // Not seeded yet — return empty array; frontend will use defaults
+        res.json([]);
+    }
+});
+
+// POST /api/track-notes
+// Saves the full track notes array to Cloudinary as a raw JSON file.
+app.post('/api/track-notes', async (req, res) => {
+    try {
+        const { notes } = req.body;
+        const json = JSON.stringify(notes);
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'User/notes',
+                    public_id: 'track-notes',
+                    overwrite: true,
+                    resource_type: 'raw'
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            const rs = new Readable();
+            rs.push(Buffer.from(json, 'utf-8'));
+            rs.push(null);
+            rs.pipe(uploadStream);
+        });
+
+        res.json({ success: true, url: uploadResult.secure_url });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/add-track
+// Uploads an audio file to Cloudinary (resource_type: video) and returns its URL.
+app.post('/api/add-track', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file provided' });
+        }
+
+        const originalName = req.file.originalname.replace(/\.[^/.]+$/, '');
+        const safeId = originalName.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'User/audio',
+                    public_id: safeId,
+                    overwrite: false,
+                    resource_type: 'video'  // Cloudinary treats audio as video
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            const rs = new Readable();
+            rs.push(req.file.buffer);
+            rs.push(null);
+            rs.pipe(uploadStream);
+        });
+
+        res.json({ success: true, url: uploadResult.secure_url, originalName: req.file.originalname });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

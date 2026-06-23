@@ -826,6 +826,60 @@ body {
     height: 72%;
 }
 
+/* Per-track Save Note button — mirrors page 4 glassmorphic style */
+.p5-note-save-btn {
+    margin-top: -20px;
+    padding: 0.35vw 1.4vw;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-family: 'Special Elite', serif;
+    font-size: 1vw;
+    color: #5a1a1a;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+
+.p5-note-save-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+}
+
+.p5-note-save-btn:active {
+    transform: scale(0.97);
+}
+
+/* Floating error toast */
+.p5-error-toast {
+    position: absolute;
+    left: 50%;
+    top: 90%;
+    transform: translateX(-50%);
+    background: rgba(120, 30, 30, 0.85);
+    color: #fff;
+    font-family: 'Special Elite', serif;
+    font-size: 1vw;
+    letter-spacing: 0.05em;
+    padding: 0.5vw 1.5vw;
+    border-radius: 50px;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    white-space: nowrap;
+}
+
+.p5-error-toast.visible {
+    opacity: 1;
+}
+
+
 /* Shared disc styling */
 .p5-disc {
     position: absolute;

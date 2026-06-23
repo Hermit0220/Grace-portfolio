@@ -77,18 +77,26 @@ function applyRole(role) {
         container.dataset.adminOnly = isAdmin ? 'true' : 'false';
     });
 
-    // Page 4 Note permissions
+    // All admin-only elements (page 4 save, page 5 save, add track)
     document.querySelectorAll('.admin-only-element').forEach(el => {
         el.style.display = isAdmin ? '' : 'none';
     });
+
+    // Page 4 note textarea readonly
     const p4Textarea = document.getElementById('p4-note-textarea');
     if (p4Textarea) {
-        if (isAdmin) {
-            p4Textarea.removeAttribute('readonly');
-        } else {
-            p4Textarea.setAttribute('readonly', 'true');
-        }
+        if (isAdmin) p4Textarea.removeAttribute('readonly');
+        else p4Textarea.setAttribute('readonly', 'true');
     }
+
+    // Page 5 textareas readonly for guests
+    ['p5-song-title', 'p5-song-details'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (isAdmin) el.removeAttribute('readonly');
+            else el.setAttribute('readonly', 'true');
+        }
+    });
 }
 
 // --- Inactivity timer ---
@@ -423,42 +431,19 @@ document.addEventListener('DOMContentLoaded', () => {
         p5Discs.forEach((disc, i) => {
             disc.classList.add(`p5-pos-${discStates[i]}`);
         });
-
-        // Add Track & Save Track functionality (Dysfunctional DB for now)
-        const p5AddBtn = document.getElementById('p5-add-btn');
-        const p5FileInput = document.getElementById('p5-file-input');
-        const p5SaveBtn = document.getElementById('p5-save-btn');
-
-        if (p5AddBtn && p5FileInput) {
-            p5AddBtn.addEventListener('click', () => {
-                p5FileInput.click();
-            });
-
-            p5FileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    p5SaveBtn.style.display = 'block'; // Show Save button
-                }
-            });
-
-            p5SaveBtn.addEventListener('click', () => {
-                // Keep dysfunctional for now as per user request
-                alert("File selected. Saving to database is not yet implemented.");
-                p5SaveBtn.style.display = 'none';
-                p5FileInput.value = '';
-            });
-        }
     }
 
-    // --- Music Player Logic ---
+    // ── Music Player + Per-Track Notes ──────────────────────────────────────
     const audioElement = document.getElementById('audio-element');
     const playPauseBtn = document.getElementById('play-pause-btn');
-    const playIcon = document.getElementById('play-icon');
-    const pauseIcon = document.getElementById('pause-icon');
-    const audioSlider = document.getElementById('audio-slider');
-    const sliderFill = document.getElementById('slider-fill');
+    const playIcon     = document.getElementById('play-icon');
+    const pauseIcon    = document.getElementById('pause-icon');
+    const audioSlider  = document.getElementById('audio-slider');
+    const sliderFill   = document.getElementById('slider-fill');
     const nextTrackBtn = document.getElementById('next-track-btn');
-    const p5NextBtn = document.getElementById('p5-next-btn');
+    const p5NextBtn    = document.getElementById('p5-next-btn');
 
+    // Default tracks (local audio folder)
     const tracks = [
         "audio/Sade - Smooth Operator (Lyrics).mp3",
         "audio/The Neighbourhood - Reflections (Official Audio).mp3",
@@ -474,51 +459,212 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     let currentTrackIndex = 0;
 
+    // ── Per-Track Notes ──────────────────────────────────────────────────────
+    const DEFAULT_NOTES = [
+        { heading: "SMOOTH OPERATOR",  body: "Cool, unhurried. Like velvet on a slow evening — the kind of song that doesn't rush anything." },
+        { heading: "REFLECTIONS",      body: "A quiet ache wrapped in reverb. Every listen feels like staring at something beautiful you can't hold onto." },
+        { heading: "HUMAN NATURE",     body: "Tender and golden. MJ at his most gentle — curiosity turned into music." },
+        { heading: "LIKE A TATTOO",    body: "Some feelings don't fade. Sade sings like she's lived every word of this." },
+        { heading: "LET ME KNOW",      body: "Soft BTS harmonies over aching questions. A song that sits quietly inside you." },
+        { heading: "STILL WITH YOU",   body: "JK's longing poured into sound. Still feels present even in its absence." },
+        { heading: "FLATLINE",         body: "Numbness in melody form. The kind of song you play when words aren't enough." },
+        { heading: "EXCITEMENT",       body: "An upswing — warmth and motion in one. Exactly what the title promises." },
+        { heading: "NOVEMBER RAIN",    body: "Nine minutes of build and release. Grief dressed up as a love song." },
+        { heading: "STRANGER",         body: "Dreamy and cool. Jhene floats through this one like she's not even trying." },
+        { heading: "SALVATORE",        body: "Lana at her most cinematic. Longing for something too beautiful to name." }
+    ];
+
+    let trackNotes = [];
+    let p5Baseline = { heading: '', body: '' };
+    let toastTimer  = null;
+
+    const p5TitleEl     = document.getElementById('p5-song-title');
+    const p5DetailsEl   = document.getElementById('p5-song-details');
+    const p5NoteSaveBtn = document.getElementById('p5-note-save-btn');
+    const p5ErrorToast  = document.getElementById('p5-error-toast');
+
+    function displayTrackNote(index) {
+        const note = trackNotes[index] || DEFAULT_NOTES[index] || { heading: '', body: '' };
+        if (p5TitleEl)   p5TitleEl.value   = note.heading || '';
+        if (p5DetailsEl) p5DetailsEl.value = note.body    || '';
+        p5Baseline = { heading: note.heading || '', body: note.body || '' };
+    }
+
+    function showP5Error(msg) {
+        if (!p5ErrorToast) return;
+        p5ErrorToast.textContent = msg;
+        p5ErrorToast.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
+    }
+
+    function loadTrackNotes() {
+        fetch('/api/track-notes')
+            .then(res => res.json())
+            .then(notes => {
+                trackNotes = Array.isArray(notes) && notes.length > 0 ? notes : [...DEFAULT_NOTES];
+                displayTrackNote(currentTrackIndex);
+            })
+            .catch(() => {
+                trackNotes = [...DEFAULT_NOTES];
+                displayTrackNote(currentTrackIndex);
+            });
+    }
+    loadTrackNotes();
+
+    // Save Note button
+    if (p5NoteSaveBtn) {
+        p5NoteSaveBtn.addEventListener('click', () => {
+            const heading = (p5TitleEl   ? p5TitleEl.value.trim()   : '');
+            const body    = (p5DetailsEl ? p5DetailsEl.value.trim() : '');
+
+            // Dirty check — nothing changed?
+            if (heading === p5Baseline.heading.trim() && body === p5Baseline.body.trim()) {
+                showP5Error('Please write something first!');
+                return;
+            }
+
+            // Update in-memory notes array
+            if (!trackNotes[currentTrackIndex]) trackNotes[currentTrackIndex] = {};
+            trackNotes[currentTrackIndex].heading = heading;
+            trackNotes[currentTrackIndex].body    = body;
+
+            p5NoteSaveBtn.textContent = 'Saving...';
+            p5NoteSaveBtn.disabled    = true;
+
+            fetch('/api/track-notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes: trackNotes })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    p5NoteSaveBtn.textContent = 'Saved!';
+                    p5Baseline = { heading, body }; // Update baseline so next click is a new dirty-check
+                    setTimeout(() => {
+                        p5NoteSaveBtn.textContent = 'Save';
+                        p5NoteSaveBtn.disabled    = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            })
+            .catch(err => {
+                console.error('Error saving track note:', err);
+                p5NoteSaveBtn.textContent = 'Error';
+                setTimeout(() => {
+                    p5NoteSaveBtn.textContent = 'Save';
+                    p5NoteSaveBtn.disabled    = false;
+                }, 2000);
+            });
+        });
+    }
+
+    // Add Track + Save Track (admin only, bottom-left)
+    const p5AddBtn    = document.getElementById('p5-add-btn');
+    const p5FileInput = document.getElementById('p5-file-input');
+    const p5SaveBtn   = document.getElementById('p5-save-btn');
+
+    if (p5AddBtn && p5FileInput) {
+        p5AddBtn.addEventListener('click', () => p5FileInput.click());
+
+        p5FileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                p5SaveBtn.style.display = '';  // Show Save Track button
+            }
+        });
+
+        if (p5SaveBtn) {
+            p5SaveBtn.addEventListener('click', () => {
+                const file = p5FileInput.files[0];
+                if (!file) return;
+
+                p5SaveBtn.textContent = 'Saving...';
+                p5SaveBtn.disabled    = true;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/api/add-track', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Append to live track list
+                            tracks.push(data.url);
+                            // Create default note entry for the new track
+                            const rawName = data.originalName.replace(/\.[^/.]+$/, '');
+                            trackNotes.push({
+                                heading: rawName.toUpperCase().substring(0, 28),
+                                body: ''
+                            });
+
+                            p5SaveBtn.textContent = 'Saved!';
+                            setTimeout(() => {
+                                p5SaveBtn.style.display = 'none';
+                                p5SaveBtn.textContent   = 'Save Track';
+                                p5SaveBtn.disabled      = false;
+                                p5FileInput.value       = '';
+                            }, 2000);
+                        } else {
+                            throw new Error(data.error || 'Upload failed');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Add track error:', err);
+                        p5SaveBtn.textContent = 'Error';
+                        p5SaveBtn.disabled    = false;
+                        setTimeout(() => { p5SaveBtn.textContent = 'Save Track'; }, 4000);
+                    });
+            });
+        }
+    }
+
+    // ── Audio player ─────────────────────────────────────────────────────────
     if (audioElement) {
         audioElement.src = tracks[currentTrackIndex];
 
-        // Initialize Volume
         audioElement.volume = 1.0;
         if (audioSlider) audioSlider.value = 100;
-        if (sliderFill) sliderFill.style.width = '100%';
+        if (sliderFill)  sliderFill.style.width = '100%';
 
         function togglePlay() {
             if (audioElement.paused) {
                 audioElement.play();
-                if (playIcon) playIcon.style.display = 'none';
+                if (playIcon)  playIcon.style.display  = 'none';
                 if (pauseIcon) pauseIcon.style.display = 'block';
             } else {
                 audioElement.pause();
-                if (playIcon) playIcon.style.display = 'block';
+                if (playIcon)  playIcon.style.display  = 'block';
                 if (pauseIcon) pauseIcon.style.display = 'none';
             }
         }
 
         window.playNextTrack = function () {
             currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
-            audioElement.src = tracks[currentTrackIndex];
+            audioElement.src  = tracks[currentTrackIndex];
             audioElement.play();
-            if (playIcon) playIcon.style.display = 'none';
+            if (playIcon)  playIcon.style.display  = 'none';
             if (pauseIcon) pauseIcon.style.display = 'block';
 
-            // Advance discs on next track
+            // Update paper text for new track
+            displayTrackNote(currentTrackIndex);
+
             if (window.advanceDiscs) window.advanceDiscs();
-        }
+        };
 
         if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
         if (nextTrackBtn) nextTrackBtn.addEventListener('click', window.playNextTrack);
-        if (p5NextBtn) p5NextBtn.addEventListener('click', window.playNextTrack);
+        if (p5NextBtn)    p5NextBtn.addEventListener('click', window.playNextTrack);
 
-        // Adjust volume when user drags slider
         if (audioSlider) {
             audioSlider.addEventListener('input', (e) => {
-                const volume = e.target.value / 100;
-                audioElement.volume = volume;
-                sliderFill.style.width = `${e.target.value}%`;
+                audioElement.volume       = e.target.value / 100;
+                sliderFill.style.width    = `${e.target.value}%`;
             });
         }
 
-        // Auto-play next track when current ends
         audioElement.addEventListener('ended', window.playNextTrack);
     }
 });
+

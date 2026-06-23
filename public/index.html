@@ -359,11 +359,16 @@
                         placeholder="&#10;Write what you feel about this song...&#10;&#10;" maxlength="160" rows="5"
                         onfocus="this.placeholder = ''" onblur="this.placeholder = 'Type your text here...'"
                         spellcheck="false"></textarea>
+                    <!-- Per-track save button -->
+                    <button id="p5-note-save-btn" class="p5-note-save-btn admin-only-element">Save</button>
                 </div>
+
+                <!-- Error toast for page 5 -->
+                <div id="p5-error-toast" class="p5-error-toast"></div>
                
                 <!-- Page 5 Controls -->
                 <div class="p5-controls-left">
-                    <button id="p5-add-btn" class="glass-btn">Add Track</button>
+                    <button id="p5-add-btn" class="glass-btn admin-only-element">Add Track</button>
                     <input type="file" id="p5-file-input" accept="audio/*" style="display: none;">
                     <button id="p5-save-btn" class="glass-btn" style="display: none;">Save Track</button>
                 </div>
