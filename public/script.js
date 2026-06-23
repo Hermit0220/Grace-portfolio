@@ -448,22 +448,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const sliderFill   = document.getElementById('slider-fill');
     const nextTrackBtn = document.getElementById('next-track-btn');
     const p5NextBtn    = document.getElementById('p5-next-btn');
+    const p5PrevBtn    = document.getElementById('p5-prev-btn');
 
-    // Default tracks (local audio folder)
-    const tracks = [
-        "audio/Sade - Smooth Operator (Lyrics).mp3",
-        "audio/The Neighbourhood - Reflections (Official Audio).mp3",
-        "audio/Michael Jackson - Human Nature (Audio).mp3",
-        "audio/Sade - Like a Tattoo (Audio).mp3",
-        "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",
-        "audio/Still With You.mp3",
-        "audio/Flatline.mp3",
-        "audio/Excitement.mp3",
-        "audio/Guns N' Roses - November Rain (Lyrics).mp3",
-        "audio/Jhené Aiko - stranger (Audio).mp3",
-        "audio/Salvatore.mp3"
+    // Hardcoded default tracks (local audio folder)
+    const DEFAULT_TRACKS = [
+        { url: "audio/Sade - Smooth Operator (Lyrics).mp3",                                                                    name: "Smooth Operator" },
+        { url: "audio/The Neighbourhood - Reflections (Official Audio).mp3",                                                    name: "Reflections" },
+        { url: "audio/Michael Jackson - Human Nature (Audio).mp3",                                                              name: "Human Nature" },
+        { url: "audio/Sade - Like a Tattoo (Audio).mp3",                                                                       name: "Like a Tattoo" },
+        { url: "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",                     name: "Let Me Know" },
+        { url: "audio/Still With You.mp3",                                                                                      name: "Still With You" },
+        { url: "audio/Flatline.mp3",                                                                                            name: "Flatline" },
+        { url: "audio/Excitement.mp3",                                                                                          name: "Excitement" },
+        { url: "audio/Guns N' Roses - November Rain (Lyrics).mp3",                                                             name: "November Rain" },
+        { url: "audio/Jhené Aiko - stranger (Audio).mp3",                                                                      name: "Stranger" },
+        { url: "audio/Salvatore.mp3",                                                                                          name: "Salvatore" }
     ];
+
+    let tracks = DEFAULT_TRACKS.map(t => t.url);  // just URLs for audio element
+    let trackMeta = [...DEFAULT_TRACKS];           // full objects {url, name}
     let currentTrackIndex = 0;
+    let isUploading = false;  // lock flag during audio upload
 
     // ── Per-Track Notes ──────────────────────────────────────────────────────
     const DEFAULT_NOTES = [
@@ -482,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let trackNotes = [];
     let p5Baseline = { heading: '', body: '' };
-    let toastTimer  = null;
+    let toastTimer = null;
 
     const p5TitleEl     = document.getElementById('p5-song-title');
     const p5DetailsEl   = document.getElementById('p5-song-details');
@@ -504,8 +509,62 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
+    // ── Disc reverse animation ───────────────────────────────────────────────
+    window.reverseDiscs = function () {
+        if (!p5Discs[0]) return;
+
+        p5Discs.forEach((disc, i) => {
+            let currentState = discStates[i];
+            let prevState = currentState - 1;
+
+            if (prevState === -1) {
+                // Move to Offscreen Bottom (state 0) but animate through pos-0 first
+                disc.classList.remove(`p5-pos-${currentState}`);
+                disc.classList.add('p5-pos-0');
+
+                // After transition finishes (1.5s), teleport to Offscreen Top (state 4)
+                setTimeout(() => {
+                    disc.classList.add('no-transition');
+                    disc.classList.remove('p5-pos-0');
+                    disc.classList.add('p5-pos-4');
+                    void disc.offsetWidth;
+                    disc.classList.remove('no-transition');
+                    discStates[i] = 4;
+                }, 1500);
+            } else {
+                disc.classList.remove(`p5-pos-${currentState}`);
+                disc.classList.add(`p5-pos-${prevState}`);
+                discStates[i] = prevState;
+            }
+        });
+    };
+
+    // ── Load track list from Cloudinary (custom tracks persist across refresh) ─
+    function saveTrackList() {
+        return fetch('/api/track-list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracks: trackMeta.slice(DEFAULT_TRACKS.length) }) // Only save custom tracks
+        }).catch(err => console.error('Could not save track list:', err));
+    }
+
+    function loadTrackList() {
+        return fetch('/api/track-list')
+            .then(res => res.json())
+            .then(customTracks => {
+                if (Array.isArray(customTracks) && customTracks.length > 0) {
+                    // Append custom tracks to defaults
+                    customTracks.forEach(t => {
+                        trackMeta.push(t);
+                        tracks.push(t.url);
+                    });
+                }
+            })
+            .catch(() => {}); // Graceful fallback — use defaults only
+    }
+
     function loadTrackNotes() {
-        fetch('/api/track-notes')
+        return fetch('/api/track-notes')
             .then(res => res.json())
             .then(notes => {
                 trackNotes = Array.isArray(notes) && notes.length > 0 ? notes : [...DEFAULT_NOTES];
@@ -516,9 +575,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayTrackNote(currentTrackIndex);
             });
     }
-    loadTrackNotes();
 
-    // Save Note button
+    // Load track list first, then notes, then init player
+    loadTrackList().then(() => {
+        if (audioElement) audioElement.src = tracks[currentTrackIndex];
+        loadTrackNotes();
+    });
+
+    // ── Save Note button ──────────────────────────────────────────────────────
     if (p5NoteSaveBtn) {
         p5NoteSaveBtn.addEventListener('click', () => {
             const heading = (p5TitleEl   ? p5TitleEl.value.trim()   : '');
@@ -547,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 if (data.success) {
                     p5NoteSaveBtn.textContent = 'Saved!';
-                    p5Baseline = { heading, body }; // Update baseline so next click is a new dirty-check
+                    p5Baseline = { heading, body };
                     setTimeout(() => {
                         p5NoteSaveBtn.textContent = 'Save';
                         p5NoteSaveBtn.disabled    = false;
@@ -567,7 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add Track + Save Track (admin only, bottom-left)
+    // ── Helper: lock/unlock nav buttons during upload ─────────────────────────
+    function setUploadLock(locked) {
+        isUploading = locked;
+        [p5NextBtn, p5PrevBtn, nextTrackBtn, playPauseBtn, p5AddBtn].forEach(btn => {
+            if (btn) btn.disabled = locked;
+        });
+    }
+
+    // ── Add Track + Save Track ────────────────────────────────────────────────
     const p5AddBtn    = document.getElementById('p5-add-btn');
     const p5FileInput = document.getElementById('p5-file-input');
     const p5SaveBtn   = document.getElementById('p5-save-btn');
@@ -577,7 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         p5FileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                p5SaveBtn.style.display = '';  // Show Save Track button
+                p5SaveBtn.style.display = '';
             }
         });
 
@@ -588,72 +660,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 p5SaveBtn.textContent = 'Saving...';
                 p5SaveBtn.disabled    = true;
+                setUploadLock(true);  // Lock navigation during upload
 
                 const formData = new FormData();
                 formData.append('file', file);
 
-                fetch('/api/sign-upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: file.name })
-                })
-                .then(res => res.json())
-                .then(signData => {
-                    if (signData.error) throw new Error(signData.error);
+                fetch('/api/add-track', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const rawName = data.originalName.replace(/\.[^/.]+$/, '');
+                            const displayName = rawName.toUpperCase().substring(0, 28);
 
-                    const fd = new FormData();
-                    fd.append('file', file);
-                    fd.append('api_key', signData.apiKey);
-                    fd.append('timestamp', signData.timestamp);
-                    fd.append('signature', signData.signature);
-                    fd.append('folder', signData.folder);
-                    fd.append('public_id', signData.public_id);
+                            // Append new track
+                            const newMeta = { url: data.url, name: rawName };
+                            trackMeta.push(newMeta);
+                            tracks.push(data.url);
 
-                    // Upload directly to Cloudinary bypassing Vercel limits
-                    return fetch(`https://api.cloudinary.com/v1_1/${signData.cloudName}/video/upload`, {
-                        method: 'POST',
-                        body: fd
-                    }).then(res => res.json()).then(uploadData => ({
-                        uploadData,
-                        originalName: file.name
-                    }));
-                })
-                .then(({ uploadData, originalName }) => {
-                    if (uploadData.error) {
-                        throw new Error(uploadData.error.message || 'Upload failed');
-                    }
-                    
-                    // Append to live track list
-                    tracks.push(uploadData.secure_url);
-                    // Create default note entry for the new track
-                    const rawName = originalName.replace(/\.[^/.]+$/, '');
-                    trackNotes.push({
-                        heading: rawName.toUpperCase().substring(0, 28),
-                        body: ''
-                    });
+                            // Default note for new track
+                            trackNotes.push({ heading: displayName, body: '' });
 
-                    p5SaveBtn.textContent = 'Saved!';
-                    setTimeout(() => {
-                        p5SaveBtn.style.display = 'none';
-                        p5SaveBtn.textContent   = 'Save Track';
-                        p5SaveBtn.disabled      = false;
-                        p5FileInput.value       = '';
-                    }, 2000);
-                })
-                .catch(err => {
-                    console.error('Add track error:', err);
+                            // Save updated custom track list to Cloudinary
+                            saveTrackList();
+
+                            p5SaveBtn.textContent = 'Saved!';
+                            setTimeout(() => {
+                                p5SaveBtn.style.display = 'none';
+                                p5SaveBtn.textContent   = 'Save Track';
+                                p5SaveBtn.disabled      = false;
+                                p5FileInput.value       = '';
+                                setUploadLock(false);  // Unlock nav
+
+                                // Auto-navigate to the newly added track
+                                currentTrackIndex = tracks.length - 1;
+                                if (audioElement) {
+                                    audioElement.src = tracks[currentTrackIndex];
+                                    // Don't auto-play — let admin write the note first
+                                }
+                                displayTrackNote(currentTrackIndex);
+                                // Advance discs to signal track change
+                                if (window.advanceDiscs) window.advanceDiscs();
+                            }, 2000);
+                        } else {
+                            throw new Error(data.error || 'Upload failed');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Add track error:', err);
                         p5SaveBtn.textContent = 'Error';
                         p5SaveBtn.disabled    = false;
+                        setUploadLock(false);
                         setTimeout(() => { p5SaveBtn.textContent = 'Save Track'; }, 4000);
                     });
             });
         }
     }
 
-    // ── Audio player ─────────────────────────────────────────────────────────
+    // ── Audio player ──────────────────────────────────────────────────────────
     if (audioElement) {
-        audioElement.src = tracks[currentTrackIndex];
-
         audioElement.volume = 1.0;
         if (audioSlider) audioSlider.value = 100;
         if (sliderFill)  sliderFill.style.width = '100%';
@@ -676,28 +740,47 @@ document.addEventListener('DOMContentLoaded', () => {
             audioElement.play();
             if (playIcon)  playIcon.style.display  = 'none';
             if (pauseIcon) pauseIcon.style.display = 'block';
-
-            // Update paper text for new track
             displayTrackNote(currentTrackIndex);
-
             if (window.advanceDiscs) window.advanceDiscs();
+        };
+
+        window.playPrevTrack = function () {
+            currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+            audioElement.src  = tracks[currentTrackIndex];
+            audioElement.play();
+            if (playIcon)  playIcon.style.display  = 'none';
+            if (pauseIcon) pauseIcon.style.display = 'block';
+            displayTrackNote(currentTrackIndex);
+            if (window.reverseDiscs) window.reverseDiscs();
         };
 
         if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
         if (nextTrackBtn) nextTrackBtn.addEventListener('click', window.playNextTrack);
+
+        // p5 Next — 2s cooldown
         if (p5NextBtn) {
-            p5NextBtn.addEventListener('click', function() {
-                if (this.disabled) return;
+            p5NextBtn.addEventListener('click', function () {
+                if (this.disabled || isUploading) return;
                 this.disabled = true;
                 window.playNextTrack();
                 setTimeout(() => { this.disabled = false; }, 2000);
             });
         }
 
+        // p5 Prev — 2s cooldown
+        if (p5PrevBtn) {
+            p5PrevBtn.addEventListener('click', function () {
+                if (this.disabled || isUploading) return;
+                this.disabled = true;
+                window.playPrevTrack();
+                setTimeout(() => { this.disabled = false; }, 2000);
+            });
+        }
+
         if (audioSlider) {
             audioSlider.addEventListener('input', (e) => {
-                audioElement.volume       = e.target.value / 100;
-                sliderFill.style.width    = `${e.target.value}%`;
+                audioElement.volume    = e.target.value / 100;
+                sliderFill.style.width = `${e.target.value}%`;
             });
         }
 

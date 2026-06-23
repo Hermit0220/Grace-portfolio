@@ -189,9 +189,7 @@ app.post('/api/note', async (req, res) => {
             );
 
             const readableStream = new Readable();
-            // Cloudinary rejects 0-byte files, so write a single space if text is empty
-            const safeText = (text && text.trim().length > 0) ? text : ' ';
-            readableStream.push(Buffer.from(safeText, 'utf-8'));
+            readableStream.push(Buffer.from(text || '', 'utf-8'));
             readableStream.push(null);
             readableStream.pipe(uploadStream);
         });
@@ -250,33 +248,82 @@ app.post('/api/track-notes', async (req, res) => {
     }
 });
 
-// POST /api/sign-upload
-// Generates a Cloudinary signature so the client can upload directly without hitting Vercel's 4.5MB limit
-app.post('/api/sign-upload', express.json(), (req, res) => {
+// POST /api/add-track
+// Uploads an audio file to Cloudinary (resource_type: video) and returns its URL.
+app.post('/api/add-track', upload.single('file'), async (req, res) => {
     try {
-        const { filename } = req.body;
-        if (!filename) {
-            return res.status(400).json({ error: 'Filename is required' });
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file provided' });
         }
 
-        const safeId = filename.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
-        const timestamp = Math.round((new Date).getTime() / 1000);
-        const folder = 'User/audio';
+        const originalName = req.file.originalname.replace(/\.[^/.]+$/, '');
+        const safeId = originalName.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
 
-        const signature = cloudinary.utils.api_sign_request({
-            timestamp: timestamp,
-            folder: folder,
-            public_id: safeId
-        }, process.env.CLOUDINARY_API_SECRET);
-
-        res.json({
-            signature,
-            timestamp,
-            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-            apiKey: process.env.CLOUDINARY_API_KEY,
-            folder,
-            public_id: safeId
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'User/audio',
+                    public_id: safeId,
+                    overwrite: false,
+                    resource_type: 'video'  // Cloudinary treats audio as video
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            const rs = new Readable();
+            rs.push(req.file.buffer);
+            rs.push(null);
+            rs.pipe(uploadStream);
         });
+
+        res.json({ success: true, url: uploadResult.secure_url, originalName: req.file.originalname });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/track-list
+// Returns the saved custom track list from Cloudinary. Falls back to empty array.
+app.get('/api/track-list', async (req, res) => {
+    try {
+        const result = await cloudinary.api.resource('User/notes/track-list', { resource_type: 'raw' });
+        const bust = `?_cb=${Date.now()}`;
+        const text = await fetchUrl(result.secure_url + bust);
+        res.json(JSON.parse(text));
+    } catch (err) {
+        res.json([]);
+    }
+});
+
+// POST /api/track-list
+// Saves the full track list (url + name) array to Cloudinary.
+app.post('/api/track-list', async (req, res) => {
+    try {
+        const { tracks } = req.body;
+        const json = JSON.stringify(tracks);
+
+        const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'User/notes',
+                    public_id: 'track-list',
+                    overwrite: true,
+                    resource_type: 'raw'
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            const rs = new Readable();
+            rs.push(Buffer.from(json, 'utf-8'));
+            rs.push(null);
+            rs.pipe(uploadStream);
+        });
+
+        res.json({ success: true, url: uploadResult.secure_url });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
