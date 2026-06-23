@@ -515,26 +515,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         p5Discs.forEach((disc, i) => {
             let currentState = discStates[i];
-            let prevState = currentState - 1;
 
-            if (prevState === -1) {
-                // Move to Offscreen Bottom (state 0) but animate through pos-0 first
-                disc.classList.remove(`p5-pos-${currentState}`);
-                disc.classList.add('p5-pos-0');
-
-                // After transition finishes (1.5s), teleport to Offscreen Top (state 4)
-                setTimeout(() => {
-                    disc.classList.add('no-transition');
-                    disc.classList.remove('p5-pos-0');
-                    disc.classList.add('p5-pos-4');
-                    void disc.offsetWidth;
-                    disc.classList.remove('no-transition');
-                    discStates[i] = 4;
-                }, 1500);
+            if (currentState === 0) {
+                // Resting offscreen bottom. Needs to enter from offscreen top (4) to top (3).
+                
+                // 1. Teleport instantly to 4
+                disc.classList.add('no-transition');
+                disc.classList.remove('p5-pos-0');
+                disc.classList.add('p5-pos-4');
+                
+                // Force reflow
+                void disc.offsetWidth;
+                
+                // 2. Re-enable transition and animate to 3
+                disc.classList.remove('no-transition');
+                disc.classList.remove('p5-pos-4');
+                disc.classList.add('p5-pos-3');
+                discStates[i] = 3;
             } else {
+                // Move downwards: 3->2, 2->1, 1->0
+                let nextState = currentState - 1;
                 disc.classList.remove(`p5-pos-${currentState}`);
-                disc.classList.add(`p5-pos-${prevState}`);
-                discStates[i] = prevState;
+                disc.classList.add(`p5-pos-${nextState}`);
+                discStates[i] = nextState;
             }
         });
     };
