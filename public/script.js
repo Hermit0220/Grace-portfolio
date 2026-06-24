@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 //  LOGIN SYSTEM — Session, Roles & Inactivity
 // ============================================================
 
@@ -558,16 +558,15 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
-    // Show / hide Manage Tracks button — visible for admin whenever there are custom tracks
+    // Show / hide Manage Tracks button — visible for admin (even if 0 custom tracks)
     window.updateManageTracksBtn = function () {
         if (!p5ManageTracksBtn) return;
         try {
             const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
             const isAdmin      = session.role === 'admin';
-            const hasCustom    = trackMeta.length > DEFAULT_TRACKS.length;
-            // Only show when: admin, has custom tracks, NOT during an upload (Save Track visible)
+            // Only show when: admin, NOT during an upload (Save Track visible)
             const saveVisible  = p5SaveBtn && p5SaveBtn.style.display !== 'none';
-            p5ManageTracksBtn.style.display = (isAdmin && hasCustom && !saveVisible) ? '' : 'none';
+            p5ManageTracksBtn.style.display = (isAdmin && !saveVisible) ? '' : 'none';
         } catch {
             p5ManageTracksBtn.style.display = 'none';
         }
