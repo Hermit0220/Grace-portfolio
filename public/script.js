@@ -402,45 +402,82 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial states: Disc 1 at Bottom(1), Disc 2 at Center(2), Disc 3 at Top(3), Disc 4 at Offscreen Bottom(0)
     let discStates = [1, 2, 3, 0];
 
-    // Make advanceDiscs globally accessible so audio player can call it
-    window.advanceDiscs = function () {
-        if (!p5Discs[0]) return;
+    // Shared animation lock — prevents rapid calls from corrupting disc states.
+    // At most ONE pending animation is remembered; extras are discarded.
+    let _discAnimLocked  = false;
+    let _discAnimPending = null; // 'forward' | 'reverse' | null
+
+    function _runDiscAnim(direction) {
+        _discAnimLocked = true;
 
         p5Discs.forEach((disc, i) => {
-            let currentState = discStates[i];
-            let nextState = currentState + 1;
+            let state = discStates[i];
 
-            if (nextState === 4) {
-                // Move to Offscreen Top (state 4)
-                disc.classList.remove(`p5-pos-${currentState}`);
-                disc.classList.add('p5-pos-4');
+            if (direction === 'forward') {
+                let next = state + 1;
+                if (state === 4) return; // disc still in transit — leave it alone
 
-                // After transition finishes (1.5s), teleport to Offscreen Bottom (state 0)
-                setTimeout(() => {
-                    disc.classList.add('no-transition'); // Disable transition
-                    disc.classList.remove('p5-pos-4');
-                    disc.classList.add('p5-pos-0');
+                if (next === 4) {
+                    // Exit upward
+                    disc.classList.remove(`p5-pos-${state}`);
+                    disc.classList.add('p5-pos-4');
+                    discStates[i] = 4; // mark IN-TRANSIT immediately so rapid calls skip it
 
-                    // Force reflow
+                    setTimeout(() => {
+                        disc.classList.add('no-transition');
+                        disc.classList.remove('p5-pos-4');
+                        disc.classList.add('p5-pos-0');
+                        void disc.offsetWidth;
+                        disc.classList.remove('no-transition');
+                        discStates[i] = 0;
+                    }, 1500);
+                } else {
+                    disc.classList.remove(`p5-pos-${state}`);
+                    disc.classList.add(`p5-pos-${next}`);
+                    discStates[i] = next;
+                }
+
+            } else { // 'reverse'
+                if (state === 4) return; // disc in transit — leave it alone
+
+                if (state === 0) {
+                    // Teleport to offscreen top, then slide down to pos-3
+                    disc.classList.add('no-transition');
+                    disc.classList.remove('p5-pos-0');
+                    disc.classList.add('p5-pos-4');
                     void disc.offsetWidth;
-
-                    disc.classList.remove('no-transition'); // Re-enable transition
-                    discStates[i] = 0;
-                }, 1500);
-            } else if (nextState < 4) {
-                disc.classList.remove(`p5-pos-${currentState}`);
-                disc.classList.add(`p5-pos-${nextState}`);
-                discStates[i] = nextState;
+                    disc.classList.remove('no-transition');
+                    disc.classList.remove('p5-pos-4');
+                    disc.classList.add('p5-pos-3');
+                    discStates[i] = 3;
+                } else {
+                    let prev = state - 1;
+                    disc.classList.remove(`p5-pos-${state}`);
+                    disc.classList.add(`p5-pos-${prev}`);
+                    discStates[i] = prev;
+                }
             }
         });
+
+        // Release lock after the CSS transition completes; process any queued animation
+        setTimeout(() => {
+            _discAnimLocked = false;
+            const pending   = _discAnimPending;
+            _discAnimPending = null;
+            if (pending) _runDiscAnim(pending);
+        }, 1500);
+    }
+
+    window.advanceDiscs = function () {
+        if (!p5Discs[0]) return;
+        if (_discAnimLocked) { _discAnimPending = 'forward'; return; }
+        _runDiscAnim('forward');
     };
 
     if (p5Discs[0]) {
-        // Apply initial classes
-        p5Discs.forEach((disc, i) => {
-            disc.classList.add(`p5-pos-${discStates[i]}`);
-        });
+        p5Discs.forEach((disc, i) => disc.classList.add(`p5-pos-${discStates[i]}`));
     }
+
 
     // ── Music Player + Per-Track Notes ──────────────────────────────────────
     const audioElement = document.getElementById('audio-element');
@@ -554,27 +591,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (index === currentTrackIndex) displayTrackNote(index);
     }
 
-    // ── Disc reverse animation ───────────────────────────────────────────────
+    // ── Disc reverse animation — uses the same shared lock as advanceDiscs ────
     window.reverseDiscs = function () {
         if (!p5Discs[0]) return;
-        p5Discs.forEach((disc, i) => {
-            let currentState = discStates[i];
-            if (currentState === 0) {
-                disc.classList.add('no-transition');
-                disc.classList.remove('p5-pos-0');
-                disc.classList.add('p5-pos-4');
-                void disc.offsetWidth;
-                disc.classList.remove('no-transition');
-                disc.classList.remove('p5-pos-4');
-                disc.classList.add('p5-pos-3');
-                discStates[i] = 3;
-            } else {
-                let nextState = currentState - 1;
-                disc.classList.remove(`p5-pos-${currentState}`);
-                disc.classList.add(`p5-pos-${nextState}`);
-                discStates[i] = nextState;
-            }
-        });
+        if (_discAnimLocked) { _discAnimPending = 'reverse'; return; }
+        _runDiscAnim('reverse');
     };
 
     // ── Custom track list helpers ─────────────────────────────────────────────
