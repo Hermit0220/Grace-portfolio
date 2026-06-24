@@ -368,10 +368,10 @@
                
                 <!-- Page 5 Controls -->
                 <div class="p5-controls-left">
+                    <button id="p5-manage-tracks-btn" class="glass-btn admin-only-element" style="display: none;">Manage Tracks</button>
                     <button id="p5-add-btn" class="glass-btn admin-only-element">Add Track</button>
                     <input type="file" id="p5-file-input" accept="audio/*" style="display: none;">
                     <button id="p5-save-btn" class="glass-btn" style="display: none;">Save Track</button>
-                    <button id="p5-remove-track-btn" class="glass-btn" style="display: none;">Remove Track</button>
                 </div>
 
                 <div class="p5-controls-right">
@@ -394,3 +394,36 @@
 </body>
 
 </html>
+
+<!-- ═══════════════════════════════════════════════════════
+     TRACK LIST POPUP (Manage Tracks)
+════════════════════════════════════════════════════════ -->
+<div id="track-list-overlay" class="track-list-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Manage Tracks">
+    <div class="track-list-popup">
+        <div class="track-list-header">
+            <span class="track-list-title">Manage Tracks</span>
+            <button id="track-list-close" class="track-list-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="track-list-body" class="track-list-body">
+            <!-- rows injected by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TRACK REMOVE CONFIRMATION POPUP
+════════════════════════════════════════════════════════ -->
+<div id="track-confirm-overlay" class="track-confirm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Confirm track removal">
+    <div class="track-confirm-popup">
+        <div class="track-confirm-icon">
+            <img src="remove-ui-svgrepo-com.svg" alt="" aria-hidden="true">
+        </div>
+        <p class="track-confirm-title">Remove this track?</p>
+        <p class="track-confirm-name" id="track-confirm-name"></p>
+        <p class="track-confirm-sub">This will permanently remove the track and its note from the website.</p>
+        <div class="track-confirm-actions">
+            <button id="track-confirm-cancel" class="glass-btn track-confirm-cancel-btn">Cancel</button>
+            <button id="track-confirm-remove" class="glass-btn track-confirm-remove-btn">Remove</button>
+        </div>
+    </div>
+</div>

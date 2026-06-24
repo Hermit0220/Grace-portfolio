@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  LOGIN SYSTEM — Session, Roles & Inactivity
 // ============================================================
 
@@ -534,7 +534,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const p5DetailsEl      = document.getElementById('p5-song-details');
     const p5NoteSaveBtn    = document.getElementById('p5-note-save-btn');
     const p5ErrorToast     = document.getElementById('p5-error-toast');
-    const p5RemoveTrackBtn = document.getElementById('p5-remove-track-btn');
+    const p5ManageTracksBtn = document.getElementById('p5-manage-tracks-btn');
+
+    // Track List popup elements
+    const trackListOverlay  = document.getElementById('track-list-overlay');
+    const trackListBody     = document.getElementById('track-list-body');
+    const trackListCloseBtn = document.getElementById('track-list-close');
+
+    // Confirmation popup elements
+    const trackConfirmOverlay = document.getElementById('track-confirm-overlay');
+    const trackConfirmName    = document.getElementById('track-confirm-name');
+    const trackConfirmCancel  = document.getElementById('track-confirm-cancel');
+    const trackConfirmRemove  = document.getElementById('track-confirm-remove');
+
+    // Track pending removal — set when confirm popup opens
+    let _pendingRemoveNoteId = null;
 
     function showP5Error(msg) {
         if (!p5ErrorToast) return;
@@ -544,18 +558,22 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
-    // Show/hide Remove Track button — only for admin + custom (non-default) track
-    window.updateRemoveTrackBtn = function () {
-        if (!p5RemoveTrackBtn) return;
+    // Show / hide Manage Tracks button — visible for admin whenever there are custom tracks
+    window.updateManageTracksBtn = function () {
+        if (!p5ManageTracksBtn) return;
         try {
             const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
-            const isAdmin   = session.role === 'admin';
-            const isCustom  = currentTrackIndex >= DEFAULT_TRACKS.length;
-            p5RemoveTrackBtn.style.display = (isAdmin && isCustom) ? '' : 'none';
+            const isAdmin      = session.role === 'admin';
+            const hasCustom    = trackMeta.length > DEFAULT_TRACKS.length;
+            // Only show when: admin, has custom tracks, NOT during an upload (Save Track visible)
+            const saveVisible  = p5SaveBtn && p5SaveBtn.style.display !== 'none';
+            p5ManageTracksBtn.style.display = (isAdmin && hasCustom && !saveVisible) ? '' : 'none';
         } catch {
-            p5RemoveTrackBtn.style.display = 'none';
+            p5ManageTracksBtn.style.display = 'none';
         }
     };
+    // Alias so applyRole still works
+    window.updateRemoveTrackBtn = window.updateManageTracksBtn;
 
     // Render a cached note to the UI
     function displayTrackNote(index) {
@@ -677,55 +695,141 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Remove Track button (admin + custom track only) ───────────────────────
-    if (p5RemoveTrackBtn) {
-        p5RemoveTrackBtn.addEventListener('click', () => {
-            if (currentTrackIndex < DEFAULT_TRACKS.length) return; // safety guard
-            const meta = trackMeta[currentTrackIndex];
-            if (!meta) return;
+    // -- Track List popup logic
+    function buildTrackListRows() {
+        if (!trackListBody) return;
+        trackListBody.innerHTML = '';
 
-            p5RemoveTrackBtn.textContent = 'Removing...';
-            p5RemoveTrackBtn.disabled    = true;
+        const customTracks = trackMeta.slice(DEFAULT_TRACKS.length);
+        if (customTracks.length === 0) {
+            trackListBody.innerHTML = '<p class="track-list-empty">No custom tracks added yet.</p>';
+            return;
+        }
 
-            fetch(`/api/track/${encodeURIComponent(meta.noteId)}`, { method: 'DELETE' })
+        customTracks.forEach((meta, relIdx) => {
+            const absIdx = DEFAULT_TRACKS.length + relIdx;
+            const row    = document.createElement('div');
+            row.className = 'track-list-item';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'track-list-item-name';
+            nameSpan.textContent = meta.name || meta.noteId;
+
+            const removeIcon = document.createElement('img');
+            removeIcon.src       = 'remove-ui-svgrepo-com.svg';
+            removeIcon.alt       = 'Remove track';
+            removeIcon.className = 'track-list-remove-icon';
+            removeIcon.title     = `Remove "${meta.name || meta.noteId}"`;
+            removeIcon.addEventListener('click', () => {
+                openConfirmPopup(meta, absIdx);
+            });
+
+            row.appendChild(nameSpan);
+            row.appendChild(removeIcon);
+            trackListBody.appendChild(row);
+        });
+    }
+
+    function openTrackListPopup() {
+        buildTrackListRows();
+        if (trackListOverlay) trackListOverlay.style.display = 'flex';
+    }
+
+    function closeTrackListPopup() {
+        if (trackListOverlay) trackListOverlay.style.display = 'none';
+    }
+
+    // ── Confirmation popup logic ───────────────────────────────────────────
+    function openConfirmPopup(meta) {
+        _pendingRemoveNoteId = meta.noteId;
+        if (trackConfirmName) trackConfirmName.textContent = meta.name || meta.noteId;
+        // Reset remove button state
+        if (trackConfirmRemove) {
+            trackConfirmRemove.textContent = 'Remove';
+            trackConfirmRemove.disabled    = false;
+        }
+        if (trackConfirmOverlay) trackConfirmOverlay.style.display = 'flex';
+    }
+
+    function closeConfirmPopup() {
+        if (trackConfirmOverlay) trackConfirmOverlay.style.display = 'none';
+        _pendingRemoveNoteId = null;
+    }
+
+    // Wire up static popup buttons
+    if (trackListCloseBtn) {
+        trackListCloseBtn.addEventListener('click', closeTrackListPopup);
+    }
+
+    if (trackConfirmCancel) {
+        trackConfirmCancel.addEventListener('click', () => {
+            closeConfirmPopup();
+            openTrackListPopup(); // Go back to track list
+        });
+    }
+
+    if (trackConfirmRemove) {
+        trackConfirmRemove.addEventListener('click', () => {
+            const noteId = _pendingRemoveNoteId;
+            if (!noteId) return;
+
+            trackConfirmRemove.textContent = 'Removing...';
+            trackConfirmRemove.disabled    = true;
+
+            fetch(`/api/track/${encodeURIComponent(noteId)}`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
                     if (!data.success) throw new Error(data.error || 'Remove failed');
 
-                    // Remove from in-memory arrays
-                    trackMeta.splice(currentTrackIndex, 1);
-                    tracks.splice(currentTrackIndex, 1);
-                    trackNotes.splice(currentTrackIndex, 1);
+                    // Remove from all in-memory arrays by noteId (safe regardless of index drift)
+                    const idx = trackMeta.findIndex(t => t.noteId === noteId);
+                    if (idx !== -1) {
+                        trackMeta.splice(idx, 1);
+                        tracks.splice(idx, 1);
+                        trackNotes.splice(idx, 1);
 
-                    // Navigate to previous track (or track 0 if none left)
-                    currentTrackIndex = Math.max(0, currentTrackIndex - 1);
-                    if (audioElement) audioElement.src = tracks[currentTrackIndex];
-                    fetchNoteForTrack(currentTrackIndex);
-                    window.updateRemoveTrackBtn();
+                        // If the removed track was the active one, navigate to a safe index
+                        if (currentTrackIndex >= idx) {
+                            currentTrackIndex = Math.max(0, currentTrackIndex - 1);
+                        }
+                        if (audioElement) audioElement.src = tracks[currentTrackIndex] || '';
+                        fetchNoteForTrack(currentTrackIndex);
+                    }
 
-                    p5RemoveTrackBtn.textContent = 'Remove Track';
-                    p5RemoveTrackBtn.disabled    = false;
+                    trackConfirmRemove.textContent = 'Removed ✓';
+                    setTimeout(() => {
+                        closeConfirmPopup();
+                        closeTrackListPopup();
+                        window.updateManageTracksBtn();
+                    }, 1200);
                 })
                 .catch(err => {
                     console.error('Remove track error:', err);
-                    p5RemoveTrackBtn.textContent = 'Error';
+                    trackConfirmRemove.textContent = 'Error — try again';
                     setTimeout(() => {
-                        p5RemoveTrackBtn.textContent = 'Remove Track';
-                        p5RemoveTrackBtn.disabled    = false;
-                    }, 3000);
+                        trackConfirmRemove.textContent = 'Remove';
+                        trackConfirmRemove.disabled    = false;
+                    }, 2500);
                 });
         });
     }
 
-    // ── Upload lock: disable nav buttons while a file is uploading ────────────
+    // Open popup when Manage Tracks button clicked
+    if (p5ManageTracksBtn) {
+        p5ManageTracksBtn.addEventListener('click', openTrackListPopup);
+    }
+
+    // ── Upload lock: hide/show Manage Tracks + disable nav during upload ────
     function setUploadLock(locked) {
         isUploading = locked;
         [p5NextBtn, p5PrevBtn, nextTrackBtn, playPauseBtn, p5AddBtn].forEach(btn => {
             if (btn) btn.disabled = locked;
         });
+        // Hide Manage Tracks while Save Track is visible so layout stays clean
+        if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = locked ? 'none' : '';
     }
 
-    // ── Add Track + Save Track ────────────────────────────────────────────────
+    // ── Add Track + Save Track ───────────────────────────────────────────────
     const p5AddBtn    = document.getElementById('p5-add-btn');
     const p5FileInput = document.getElementById('p5-file-input');
     const p5SaveBtn   = document.getElementById('p5-save-btn');
@@ -734,7 +838,11 @@ document.addEventListener('DOMContentLoaded', () => {
         p5AddBtn.addEventListener('click', () => p5FileInput.click());
 
         p5FileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) p5SaveBtn.style.display = '';
+            if (e.target.files.length > 0) {
+                p5SaveBtn.style.display = '';
+                // Hide Manage Tracks while Save Track takes its place
+                if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = 'none';
+            }
         });
 
         if (p5SaveBtn) {
@@ -753,12 +861,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            // API now returns noteId (safeId derived from filename)
                             const newMeta = { url: data.url, name: data.originalName.replace(/\.[^/.]+$/, ''), noteId: data.noteId };
                             trackMeta.push(newMeta);
                             tracks.push(data.url);
-                            // Leave trackNotes slot undefined so it lazy-fetches (shows blank placeholders)
-
                             saveTrackList();
 
                             p5SaveBtn.textContent = 'Saved!';
@@ -769,11 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 p5FileInput.value       = '';
                                 setUploadLock(false);
 
+                                // Manage Tracks reappears after Save Track hides
+                                window.updateManageTracksBtn();
+
                                 // Auto-navigate to the newly added track
                                 currentTrackIndex = tracks.length - 1;
                                 if (audioElement) audioElement.src = tracks[currentTrackIndex];
-                                fetchNoteForTrack(currentTrackIndex); // will show blank placeholders
-                                window.updateRemoveTrackBtn();        // show Remove Track btn
+                                fetchNoteForTrack(currentTrackIndex);
                                 if (window.advanceDiscs) window.advanceDiscs();
                             }, 2000);
                         } else {
@@ -785,6 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         p5SaveBtn.textContent = 'Error';
                         p5SaveBtn.disabled    = false;
                         setUploadLock(false);
+                        window.updateManageTracksBtn(); // restore button on error too
                         setTimeout(() => { p5SaveBtn.textContent = 'Save Track'; }, 4000);
                     });
             });
@@ -862,4 +970,5 @@ document.addEventListener('DOMContentLoaded', () => {
         audioElement.addEventListener('ended', window.playNextTrack);
     }
 });
+
 
