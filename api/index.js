@@ -207,49 +207,69 @@ app.post('/api/note', async (req, res) => {
     }
 });
 
-// GET /api/track-notes
-// Returns the full per-track notes JSON array from Cloudinary.
-// Falls back to empty array if not seeded yet.
-app.get('/api/track-notes', async (req, res) => {
+// Helper: upload a raw JSON string to User/notes/{publicId} in Cloudinary
+async function uploadNoteFile(publicId, jsonString) {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'User/notes', public_id: publicId, overwrite: true, resource_type: 'raw' },
+            (error, result) => { if (error) reject(error); else resolve(result); }
+        );
+        const rs = new Readable();
+        rs.push(Buffer.from(jsonString, 'utf-8'));
+        rs.push(null);
+        rs.pipe(uploadStream);
+    });
+}
+
+// GET /api/track-note/:noteId
+// Returns the individual note JSON for a given track. Returns null if not saved yet.
+app.get('/api/track-note/:noteId', async (req, res) => {
+    const { noteId } = req.params;
     try {
-        const result = await cloudinary.api.resource('User/notes/track-notes', { resource_type: 'raw' });
-        // Append cache-buster to avoid stale CDN responses
-        const bust = `?_cb=${Date.now()}`;
-        const text = await fetchUrl(result.secure_url + bust);
+        const result = await cloudinary.api.resource(`User/notes/note-${noteId}`, { resource_type: 'raw' });
+        const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
         res.json(JSON.parse(text));
     } catch (err) {
-        // Not seeded yet — return empty array; frontend will use defaults
-        res.json([]);
+        res.json(null); // No note saved yet — frontend will use defaults
     }
 });
 
-// POST /api/track-notes
-// Saves the full track notes array to Cloudinary as a raw JSON file.
-app.post('/api/track-notes', async (req, res) => {
+// POST /api/track-note/:noteId
+// Saves the individual note { heading, body } for a given track to its own file.
+app.post('/api/track-note/:noteId', async (req, res) => {
+    const { noteId } = req.params;
+    const { heading, body } = req.body;
     try {
-        const { notes } = req.body;
-        const json = JSON.stringify(notes);
+        await uploadNoteFile(`note-${noteId}`, JSON.stringify({ heading, body }));
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-        const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    folder: 'User/notes',
-                    public_id: 'track-notes',
-                    overwrite: true,
-                    resource_type: 'raw'
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
-            const rs = new Readable();
-            rs.push(Buffer.from(json, 'utf-8'));
-            rs.push(null);
-            rs.pipe(uploadStream);
-        });
+// DELETE /api/track/:noteId
+// Removes the track from the custom track list AND deletes its individual note file.
+app.delete('/api/track/:noteId', async (req, res) => {
+    const { noteId } = req.params;
+    try {
+        // Load current track list
+        let trackList = [];
+        try {
+            const result = await cloudinary.api.resource('User/notes/track-list', { resource_type: 'raw' });
+            const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
+            trackList = JSON.parse(text);
+        } catch (e) { /* list may not exist yet */ }
 
-        res.json({ success: true, url: uploadResult.secure_url });
+        // Remove this track from the list and re-save
+        trackList = trackList.filter(t => t.noteId !== noteId);
+        await uploadNoteFile('track-list', JSON.stringify(trackList));
+
+        // Delete the track's individual note file (non-fatal if it doesn't exist)
+        try {
+            await cloudinary.uploader.destroy(`User/notes/note-${noteId}`, { resource_type: 'raw' });
+        } catch (e) { /* note may not exist */ }
+
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -285,52 +305,37 @@ app.post('/api/add-track', upload.single('file'), async (req, res) => {
             rs.pipe(uploadStream);
         });
 
-        res.json({ success: true, url: uploadResult.secure_url, originalName: req.file.originalname });
+        res.json({ success: true, url: uploadResult.secure_url, originalName: req.file.originalname, noteId: safeId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 // GET /api/track-list
-// Returns the saved custom track list from Cloudinary. Falls back to empty array.
+// Returns saved custom tracks. Returns [] if not found OR if data is old format (missing noteId).
 app.get('/api/track-list', async (req, res) => {
     try {
         const result = await cloudinary.api.resource('User/notes/track-list', { resource_type: 'raw' });
-        const bust = `?_cb=${Date.now()}`;
-        const text = await fetchUrl(result.secure_url + bust);
-        res.json(JSON.parse(text));
+        const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
+        const parsed = JSON.parse(text);
+        // Validate new format: every entry must have noteId.
+        // Old format (url + name only) is treated as empty — auto-clears old custom tracks.
+        if (!Array.isArray(parsed) || parsed.some(t => !t.noteId)) {
+            return res.json([]);
+        }
+        res.json(parsed);
     } catch (err) {
         res.json([]);
     }
 });
 
 // POST /api/track-list
-// Saves the full track list (url + name) array to Cloudinary.
+// Saves the full custom track list (url + name + noteId) to Cloudinary.
 app.post('/api/track-list', async (req, res) => {
     try {
         const { tracks } = req.body;
-        const json = JSON.stringify(tracks);
-
-        const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    folder: 'User/notes',
-                    public_id: 'track-list',
-                    overwrite: true,
-                    resource_type: 'raw'
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                }
-            );
-            const rs = new Readable();
-            rs.push(Buffer.from(json, 'utf-8'));
-            rs.push(null);
-            rs.pipe(uploadStream);
-        });
-
-        res.json({ success: true, url: uploadResult.secure_url });
+        await uploadNoteFile('track-list', JSON.stringify(tracks));
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

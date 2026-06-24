@@ -97,6 +97,9 @@ function applyRole(role) {
             else el.setAttribute('readonly', 'true');
         }
     });
+
+    // Refresh Remove Track button visibility (depends on role + track type)
+    if (window.updateRemoveTrackBtn) window.updateRemoveTrackBtn();
 }
 
 // --- Inactivity timer ---
@@ -450,27 +453,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const p5NextBtn    = document.getElementById('p5-next-btn');
     const p5PrevBtn    = document.getElementById('p5-prev-btn');
 
-    // Hardcoded default tracks (local audio folder)
+    // Hardcoded default tracks — each has a stable noteId used as its Cloudinary note file name
     const DEFAULT_TRACKS = [
-        { url: "audio/Sade - Smooth Operator (Lyrics).mp3",                                                                    name: "Smooth Operator" },
-        { url: "audio/The Neighbourhood - Reflections (Official Audio).mp3",                                                    name: "Reflections" },
-        { url: "audio/Michael Jackson - Human Nature (Audio).mp3",                                                              name: "Human Nature" },
-        { url: "audio/Sade - Like a Tattoo (Audio).mp3",                                                                       name: "Like a Tattoo" },
-        { url: "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",                     name: "Let Me Know" },
-        { url: "audio/Still With You.mp3",                                                                                      name: "Still With You" },
-        { url: "audio/Flatline.mp3",                                                                                            name: "Flatline" },
-        { url: "audio/Excitement.mp3",                                                                                          name: "Excitement" },
-        { url: "audio/Guns N' Roses - November Rain (Lyrics).mp3",                                                             name: "November Rain" },
-        { url: "audio/Jhené Aiko - stranger (Audio).mp3",                                                                      name: "Stranger" },
-        { url: "audio/Salvatore.mp3",                                                                                          name: "Salvatore" }
+        { url: "audio/Sade - Smooth Operator (Lyrics).mp3",                                                               name: "Smooth Operator", noteId: "smooth-operator"  },
+        { url: "audio/The Neighbourhood - Reflections (Official Audio).mp3",                                               name: "Reflections",     noteId: "reflections"       },
+        { url: "audio/Michael Jackson - Human Nature (Audio).mp3",                                                         name: "Human Nature",    noteId: "human-nature"      },
+        { url: "audio/Sade - Like a Tattoo (Audio).mp3",                                                                   name: "Like a Tattoo",   noteId: "like-a-tattoo"     },
+        { url: "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",                 name: "Let Me Know",     noteId: "let-me-know"       },
+        { url: "audio/Still With You.mp3",                                                                                 name: "Still With You",  noteId: "still-with-you"    },
+        { url: "audio/Flatline.mp3",                                                                                       name: "Flatline",        noteId: "flatline"          },
+        { url: "audio/Excitement.mp3",                                                                                     name: "Excitement",      noteId: "excitement"        },
+        { url: "audio/Guns N' Roses - November Rain (Lyrics).mp3",                                                        name: "November Rain",   noteId: "november-rain"     },
+        { url: "audio/Jhené Aiko - stranger (Audio).mp3",                                                                  name: "Stranger",        noteId: "stranger"          },
+        { url: "audio/Salvatore.mp3",                                                                                      name: "Salvatore",       noteId: "salvatore"         }
     ];
 
-    let tracks = DEFAULT_TRACKS.map(t => t.url);  // just URLs for audio element
-    let trackMeta = [...DEFAULT_TRACKS];           // full objects {url, name}
+    let tracks    = DEFAULT_TRACKS.map(t => t.url);  // URL-only array for <audio>
+    let trackMeta = [...DEFAULT_TRACKS];              // full {url, name, noteId} array
     let currentTrackIndex = 0;
-    let isUploading = false;  // lock flag during audio upload
+    let isUploading = false;
 
-    // ── Per-Track Notes ──────────────────────────────────────────────────────
+    // Fallback note text shown when no Cloudinary file exists for a default track
     const DEFAULT_NOTES = [
         { heading: "SMOOTH OPERATOR",  body: "Cool, unhurried. Like velvet on a slow evening — the kind of song that doesn't rush anything." },
         { heading: "REFLECTIONS",      body: "A quiet ache wrapped in reverb. Every listen feels like staring at something beautiful you can't hold onto." },
@@ -485,21 +488,16 @@ document.addEventListener('DOMContentLoaded', () => {
         { heading: "SALVATORE",        body: "Lana at her most cinematic. Longing for something too beautiful to name." }
     ];
 
+    // Per-track note cache — lazy loaded on demand. undefined = not fetched yet.
     let trackNotes = [];
     let p5Baseline = { heading: '', body: '' };
     let toastTimer = null;
 
-    const p5TitleEl     = document.getElementById('p5-song-title');
-    const p5DetailsEl   = document.getElementById('p5-song-details');
-    const p5NoteSaveBtn = document.getElementById('p5-note-save-btn');
-    const p5ErrorToast  = document.getElementById('p5-error-toast');
-
-    function displayTrackNote(index) {
-        const note = trackNotes[index] || DEFAULT_NOTES[index] || { heading: '', body: '' };
-        if (p5TitleEl)   p5TitleEl.value   = note.heading || '';
-        if (p5DetailsEl) p5DetailsEl.value = note.body    || '';
-        p5Baseline = { heading: note.heading || '', body: note.body || '' };
-    }
+    const p5TitleEl        = document.getElementById('p5-song-title');
+    const p5DetailsEl      = document.getElementById('p5-song-details');
+    const p5NoteSaveBtn    = document.getElementById('p5-note-save-btn');
+    const p5ErrorToast     = document.getElementById('p5-error-toast');
+    const p5RemoveTrackBtn = document.getElementById('p5-remove-track-btn');
 
     function showP5Error(msg) {
         if (!p5ErrorToast) return;
@@ -509,31 +507,68 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
+    // Show/hide Remove Track button — only for admin + custom (non-default) track
+    window.updateRemoveTrackBtn = function () {
+        if (!p5RemoveTrackBtn) return;
+        try {
+            const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
+            const isAdmin   = session.role === 'admin';
+            const isCustom  = currentTrackIndex >= DEFAULT_TRACKS.length;
+            p5RemoveTrackBtn.style.display = (isAdmin && isCustom) ? '' : 'none';
+        } catch {
+            p5RemoveTrackBtn.style.display = 'none';
+        }
+    };
+
+    // Render a cached note to the UI
+    function displayTrackNote(index) {
+        const note = trackNotes[index];
+        if (note === undefined) {
+            // Not cached yet — blank the fields and trigger a fetch
+            if (p5TitleEl)   p5TitleEl.value   = '';
+            if (p5DetailsEl) p5DetailsEl.value = '';
+            p5Baseline = { heading: '', body: '' };
+            fetchNoteForTrack(index);
+            return;
+        }
+        if (p5TitleEl)   p5TitleEl.value   = note.heading || '';
+        if (p5DetailsEl) p5DetailsEl.value = note.body    || '';
+        p5Baseline = { heading: note.heading || '', body: note.body || '' };
+    }
+
+    // Lazy-fetch a track's note from its own Cloudinary file
+    async function fetchNoteForTrack(index) {
+        const meta = trackMeta[index];
+        if (!meta) return;
+        try {
+            const res  = await fetch(`/api/track-note/${encodeURIComponent(meta.noteId)}`);
+            const note = await res.json();
+            // If Cloudinary returned a real note, use it; otherwise fall back to hardcoded default
+            trackNotes[index] = (note && (note.heading || note.body))
+                ? note
+                : (DEFAULT_NOTES[index] || { heading: '', body: '' });
+        } catch {
+            trackNotes[index] = DEFAULT_NOTES[index] || { heading: '', body: '' };
+        }
+        // Only update the display if this track is still the active one
+        if (index === currentTrackIndex) displayTrackNote(index);
+    }
+
     // ── Disc reverse animation ───────────────────────────────────────────────
     window.reverseDiscs = function () {
         if (!p5Discs[0]) return;
-
         p5Discs.forEach((disc, i) => {
             let currentState = discStates[i];
-
             if (currentState === 0) {
-                // Resting offscreen bottom. Needs to enter from offscreen top (4) to top (3).
-                
-                // 1. Teleport instantly to 4
                 disc.classList.add('no-transition');
                 disc.classList.remove('p5-pos-0');
                 disc.classList.add('p5-pos-4');
-                
-                // Force reflow
                 void disc.offsetWidth;
-                
-                // 2. Re-enable transition and animate to 3
                 disc.classList.remove('no-transition');
                 disc.classList.remove('p5-pos-4');
                 disc.classList.add('p5-pos-3');
                 discStates[i] = 3;
             } else {
-                // Move downwards: 3->2, 2->1, 1->0
                 let nextState = currentState - 1;
                 disc.classList.remove(`p5-pos-${currentState}`);
                 disc.classList.add(`p5-pos-${nextState}`);
@@ -542,12 +577,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // ── Load track list from Cloudinary (custom tracks persist across refresh) ─
+    // ── Custom track list helpers ─────────────────────────────────────────────
     function saveTrackList() {
+        // Only persist the custom (non-default) tracks, with their noteId
+        const customTracks = trackMeta.slice(DEFAULT_TRACKS.length);
         return fetch('/api/track-list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tracks: trackMeta.slice(DEFAULT_TRACKS.length) }) // Only save custom tracks
+            body: JSON.stringify({ tracks: customTracks })
         }).catch(err => console.error('Could not save track list:', err));
     }
 
@@ -556,33 +593,20 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(customTracks => {
                 if (Array.isArray(customTracks) && customTracks.length > 0) {
-                    // Append custom tracks to defaults
                     customTracks.forEach(t => {
                         trackMeta.push(t);
                         tracks.push(t.url);
                     });
                 }
             })
-            .catch(() => {}); // Graceful fallback — use defaults only
+            .catch(() => {});
     }
 
-    function loadTrackNotes() {
-        return fetch('/api/track-notes')
-            .then(res => res.json())
-            .then(notes => {
-                trackNotes = Array.isArray(notes) && notes.length > 0 ? notes : [...DEFAULT_NOTES];
-                displayTrackNote(currentTrackIndex);
-            })
-            .catch(() => {
-                trackNotes = [...DEFAULT_NOTES];
-                displayTrackNote(currentTrackIndex);
-            });
-    }
-
-    // Load track list first, then notes, then init player
+    // Boot: load track list, set audio src, fetch note for track 0
     loadTrackList().then(() => {
         if (audioElement) audioElement.src = tracks[currentTrackIndex];
-        loadTrackNotes();
+        fetchNoteForTrack(currentTrackIndex);
+        window.updateRemoveTrackBtn();
     });
 
     // ── Save Note button ──────────────────────────────────────────────────────
@@ -591,30 +615,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const heading = (p5TitleEl   ? p5TitleEl.value.trim()   : '');
             const body    = (p5DetailsEl ? p5DetailsEl.value.trim() : '');
 
-            // Dirty check — nothing changed?
             if (heading === p5Baseline.heading.trim() && body === p5Baseline.body.trim()) {
                 showP5Error('Please write something first!');
                 return;
             }
 
-            // Update in-memory notes array
-            if (!trackNotes[currentTrackIndex]) trackNotes[currentTrackIndex] = {};
-            trackNotes[currentTrackIndex].heading = heading;
-            trackNotes[currentTrackIndex].body    = body;
+            // Update cache
+            trackNotes[currentTrackIndex] = { heading, body };
+            p5Baseline = { heading, body };
 
             p5NoteSaveBtn.textContent = 'Saving...';
             p5NoteSaveBtn.disabled    = true;
 
-            fetch('/api/track-notes', {
+            const noteId = trackMeta[currentTrackIndex].noteId;
+            fetch(`/api/track-note/${encodeURIComponent(noteId)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ notes: trackNotes })
+                body: JSON.stringify({ heading, body })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     p5NoteSaveBtn.textContent = 'Saved!';
-                    p5Baseline = { heading, body };
                     setTimeout(() => {
                         p5NoteSaveBtn.textContent = 'Save';
                         p5NoteSaveBtn.disabled    = false;
@@ -634,7 +656,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Helper: lock/unlock nav buttons during upload ─────────────────────────
+    // ── Remove Track button (admin + custom track only) ───────────────────────
+    if (p5RemoveTrackBtn) {
+        p5RemoveTrackBtn.addEventListener('click', () => {
+            if (currentTrackIndex < DEFAULT_TRACKS.length) return; // safety guard
+            const meta = trackMeta[currentTrackIndex];
+            if (!meta) return;
+
+            p5RemoveTrackBtn.textContent = 'Removing...';
+            p5RemoveTrackBtn.disabled    = true;
+
+            fetch(`/api/track/${encodeURIComponent(meta.noteId)}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) throw new Error(data.error || 'Remove failed');
+
+                    // Remove from in-memory arrays
+                    trackMeta.splice(currentTrackIndex, 1);
+                    tracks.splice(currentTrackIndex, 1);
+                    trackNotes.splice(currentTrackIndex, 1);
+
+                    // Navigate to previous track (or track 0 if none left)
+                    currentTrackIndex = Math.max(0, currentTrackIndex - 1);
+                    if (audioElement) audioElement.src = tracks[currentTrackIndex];
+                    fetchNoteForTrack(currentTrackIndex);
+                    window.updateRemoveTrackBtn();
+
+                    p5RemoveTrackBtn.textContent = 'Remove Track';
+                    p5RemoveTrackBtn.disabled    = false;
+                })
+                .catch(err => {
+                    console.error('Remove track error:', err);
+                    p5RemoveTrackBtn.textContent = 'Error';
+                    setTimeout(() => {
+                        p5RemoveTrackBtn.textContent = 'Remove Track';
+                        p5RemoveTrackBtn.disabled    = false;
+                    }, 3000);
+                });
+        });
+    }
+
+    // ── Upload lock: disable nav buttons while a file is uploading ────────────
     function setUploadLock(locked) {
         isUploading = locked;
         [p5NextBtn, p5PrevBtn, nextTrackBtn, playPauseBtn, p5AddBtn].forEach(btn => {
@@ -651,9 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         p5AddBtn.addEventListener('click', () => p5FileInput.click());
 
         p5FileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                p5SaveBtn.style.display = '';
-            }
+            if (e.target.files.length > 0) p5SaveBtn.style.display = '';
         });
 
         if (p5SaveBtn) {
@@ -663,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 p5SaveBtn.textContent = 'Saving...';
                 p5SaveBtn.disabled    = true;
-                setUploadLock(true);  // Lock navigation during upload
+                setUploadLock(true);
 
                 const formData = new FormData();
                 formData.append('file', file);
@@ -672,18 +732,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            const rawName = data.originalName.replace(/\.[^/.]+$/, '');
-                            const displayName = rawName.toUpperCase().substring(0, 28);
-
-                            // Append new track
-                            const newMeta = { url: data.url, name: rawName };
+                            // API now returns noteId (safeId derived from filename)
+                            const newMeta = { url: data.url, name: data.originalName.replace(/\.[^/.]+$/, ''), noteId: data.noteId };
                             trackMeta.push(newMeta);
                             tracks.push(data.url);
+                            // Leave trackNotes slot undefined so it lazy-fetches (shows blank placeholders)
 
-                            // Default note for new track
-                            trackNotes.push({ heading: displayName, body: '' });
-
-                            // Save updated custom track list to Cloudinary
                             saveTrackList();
 
                             p5SaveBtn.textContent = 'Saved!';
@@ -692,16 +746,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 p5SaveBtn.textContent   = 'Save Track';
                                 p5SaveBtn.disabled      = false;
                                 p5FileInput.value       = '';
-                                setUploadLock(false);  // Unlock nav
+                                setUploadLock(false);
 
                                 // Auto-navigate to the newly added track
                                 currentTrackIndex = tracks.length - 1;
-                                if (audioElement) {
-                                    audioElement.src = tracks[currentTrackIndex];
-                                    // Don't auto-play — let admin write the note first
-                                }
-                                displayTrackNote(currentTrackIndex);
-                                // Advance discs to signal track change
+                                if (audioElement) audioElement.src = tracks[currentTrackIndex];
+                                fetchNoteForTrack(currentTrackIndex); // will show blank placeholders
+                                window.updateRemoveTrackBtn();        // show Remove Track btn
                                 if (window.advanceDiscs) window.advanceDiscs();
                             }, 2000);
                         } else {
@@ -744,6 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playIcon)  playIcon.style.display  = 'none';
             if (pauseIcon) pauseIcon.style.display = 'block';
             displayTrackNote(currentTrackIndex);
+            window.updateRemoveTrackBtn();
             if (window.advanceDiscs) window.advanceDiscs();
         };
 
@@ -754,13 +806,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playIcon)  playIcon.style.display  = 'none';
             if (pauseIcon) pauseIcon.style.display = 'block';
             displayTrackNote(currentTrackIndex);
+            window.updateRemoveTrackBtn();
             if (window.reverseDiscs) window.reverseDiscs();
         };
 
         if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
         if (nextTrackBtn) nextTrackBtn.addEventListener('click', window.playNextTrack);
 
-        // p5 Next — 2s cooldown
         if (p5NextBtn) {
             p5NextBtn.addEventListener('click', function () {
                 if (this.disabled || isUploading) return;
@@ -770,7 +822,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // p5 Prev — 2s cooldown
         if (p5PrevBtn) {
             p5PrevBtn.addEventListener('click', function () {
                 if (this.disabled || isUploading) return;
