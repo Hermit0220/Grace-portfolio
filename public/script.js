@@ -558,16 +558,15 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
-    // Show / hide Manage Tracks button — visible for admin whenever there are custom tracks
+    // Show / hide Manage Tracks button — visible for admin always, except when Save Track is visible
     window.updateManageTracksBtn = function () {
         if (!p5ManageTracksBtn) return;
         try {
             const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
             const isAdmin      = session.role === 'admin';
-            const hasCustom    = trackMeta.length > DEFAULT_TRACKS.length;
-            // Only show when: admin, has custom tracks, NOT during an upload (Save Track visible)
+            // Only show when: admin, and NOT during an upload (Save Track visible)
             const saveVisible  = p5SaveBtn && p5SaveBtn.style.display !== 'none';
-            p5ManageTracksBtn.style.display = (isAdmin && hasCustom && !saveVisible) ? '' : 'none';
+            p5ManageTracksBtn.style.display = (isAdmin && !saveVisible) ? '' : 'none';
         } catch {
             p5ManageTracksBtn.style.display = 'none';
         }
@@ -596,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const meta = trackMeta[index];
         if (!meta) return;
         try {
-            const res  = await fetch(`/api/track-note/${encodeURIComponent(meta.noteId)}`);
+            const res  = await fetch(`/api/track-note/${encodeURIComponent(meta.noteId)}?_cb=` + Date.now(), { cache: 'no-store' });
             const note = await res.json();
             // If Cloudinary returned a real note, use it; otherwise fall back to hardcoded default
             trackNotes[index] = (note && (note.heading || note.body))
@@ -628,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadTrackList() {
-        return fetch('/api/track-list')
+        return fetch('/api/track-list?_cb=' + Date.now(), { cache: 'no-store' })
             .then(res => res.json())
             .then(customTracks => {
                 if (Array.isArray(customTracks) && customTracks.length > 0) {
