@@ -536,21 +536,11 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
-    // Show / hide Manage Tracks button.
-    // Rule: always visible for admin. Hidden only when Save Track is showing (setUploadLock handles that).
-    // IMPORTANT: this function must NOT reference p5SaveBtn or any const declared later in this
-    // DOMContentLoaded block, because applyRole() can call it before those consts are initialised.
-    window.updateManageTracksBtn = function () {
-        if (!p5ManageTracksBtn) return;
-        try {
-            const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
-            p5ManageTracksBtn.style.display = (session.role === 'admin') ? '' : 'none';
-        } catch {
-            p5ManageTracksBtn.style.display = 'none';
-        }
-    };
-    // Alias so applyRole and legacy code still works
-    window.updateRemoveTrackBtn = window.updateManageTracksBtn;
+    // Manage Tracks visibility is handled exclusively by applyRole() via .admin-only-element.
+    // No dynamic show/hide here — the button is always visible once admin is logged in.
+    // This no-op keeps any legacy call-sites from crashing.
+    window.updateRemoveTrackBtn  = function () {};
+    window.updateManageTracksBtn = function () {};
 
 
     // Render a cached note to the UI
@@ -626,9 +616,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (audioElement) audioElement.src = tracks[currentTrackIndex];
             fetchNoteForTrack(currentTrackIndex);
         }
-        // Show Manage Tracks button if admin (always — even with empty list)
-        window.updateManageTracksBtn();
     });
+
 
 
     // ── Save Note button ──────────────────────────────────────────────────────
@@ -783,8 +772,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => {
                         closeConfirmPopup();
                         closeTrackListPopup();
-                        window.updateManageTracksBtn();
                     }, 1200);
+
                 })
                 .catch(err => {
                     console.error('Remove track error:', err);
@@ -802,20 +791,12 @@ document.addEventListener('DOMContentLoaded', () => {
         p5ManageTracksBtn.addEventListener('click', openTrackListPopup);
     }
 
-    // ── Upload lock: hide Manage Tracks during upload, restore correctly after ──
+    // ── Upload lock: disable nav buttons while uploading ────────────────────
     function setUploadLock(locked) {
         isUploading = locked;
         [p5NextBtn, p5PrevBtn, nextTrackBtn, playPauseBtn, p5AddBtn].forEach(btn => {
             if (btn) btn.disabled = locked;
         });
-        if (locked) {
-            // Hide Manage Tracks while upload in progress
-            if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = 'none';
-        } else {
-            // Restore correctly (respects admin check, not just blind show)
-            window.updateManageTracksBtn();
-        }
-
     }
 
     // ── Add Track + Save Track ───────────────────────────────────────────────
@@ -829,10 +810,9 @@ document.addEventListener('DOMContentLoaded', () => {
         p5FileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 p5SaveBtn.style.display = '';
-                // Hide Manage Tracks while Save Track takes its place
-                if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = 'none';
             }
         });
+
 
         if (p5SaveBtn) {
             p5SaveBtn.addEventListener('click', () => {
@@ -863,15 +843,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 p5FileInput.value       = '';
                                 setUploadLock(false);
 
-                                // Manage Tracks reappears after Save Track hides
-                                window.updateManageTracksBtn();
-
                                 // Auto-navigate to the newly added track
                                 currentTrackIndex = tracks.length - 1;
                                 if (audioElement) audioElement.src = tracks[currentTrackIndex];
                                 fetchNoteForTrack(currentTrackIndex);
                                 if (window.advanceDiscs) window.advanceDiscs();
                             }, 2000);
+
                         } else {
                             throw new Error(data.error || 'Upload failed');
                         }
@@ -881,9 +859,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         p5SaveBtn.textContent = 'Error';
                         p5SaveBtn.disabled    = false;
                         setUploadLock(false);
-                        window.updateManageTracksBtn(); // restore button on error too
                         setTimeout(() => { p5SaveBtn.textContent = 'Save Track'; }, 4000);
                     });
+
             });
         }
     }
