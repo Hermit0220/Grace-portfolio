@@ -1,17 +1,4 @@
 // ============================================================
-//  MOBILE DETECTION — Block access on mobile devices
-// ============================================================
-(function checkMobile() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    if (isMobile) {
-        document.addEventListener('DOMContentLoaded', () => {
-            const overlay = document.getElementById('mobile-block-overlay');
-            if (overlay) overlay.style.display = 'flex';
-        });
-    }
-})();
-
-// ============================================================
 //  LOGIN SYSTEM — Session, Roles & Inactivity
 // ============================================================
 
