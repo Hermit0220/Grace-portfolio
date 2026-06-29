@@ -248,11 +248,13 @@ app.post('/api/track-note/:noteId', async (req, res) => {
 });
 
 // DELETE /api/track/:noteId
-// Removes the track from the custom track list AND deletes its individual note file.
+// Permanently removes the track from the custom list AND destroys both:
+//  - the audio file  (User/audio/{noteId}, resource_type: video)
+//  - the note file   (User/notes/note-{noteId}, resource_type: raw)
 app.delete('/api/track/:noteId', async (req, res) => {
     const { noteId } = req.params;
     try {
-        // Load current track list
+        // 1. Load current track list
         let trackList = [];
         try {
             const result = await cloudinary.api.resource('User/notes/track-list', { resource_type: 'raw' });
@@ -260,20 +262,26 @@ app.delete('/api/track/:noteId', async (req, res) => {
             trackList = JSON.parse(text);
         } catch (e) { /* list may not exist yet */ }
 
-        // Remove this track from the list and re-save
+        // 2. Remove this track entry and re-save the list
         trackList = trackList.filter(t => t.noteId !== noteId);
         await uploadNoteFile('track-list', JSON.stringify(trackList));
 
-        // Delete the track's individual note file (non-fatal if it doesn't exist)
+        // 3. Permanently destroy the audio file from Cloudinary
+        try {
+            await cloudinary.uploader.destroy(`User/audio/${noteId}`, { resource_type: 'video' });
+        } catch (e) { /* audio may not exist — non-fatal */ }
+
+        // 4. Permanently destroy the note file from Cloudinary
         try {
             await cloudinary.uploader.destroy(`User/notes/note-${noteId}`, { resource_type: 'raw' });
-        } catch (e) { /* note may not exist */ }
+        } catch (e) { /* note may not exist — non-fatal */ }
 
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // POST /api/add-track
 // Uploads an audio file to Cloudinary (resource_type: video) and returns its URL.

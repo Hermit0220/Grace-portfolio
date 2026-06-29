@@ -490,40 +490,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const p5NextBtn    = document.getElementById('p5-next-btn');
     const p5PrevBtn    = document.getElementById('p5-prev-btn');
 
-    // Hardcoded default tracks — each has a stable noteId used as its Cloudinary note file name
-    const DEFAULT_TRACKS = [
-        { url: "audio/Sade - Smooth Operator (Lyrics).mp3",                                                               name: "Smooth Operator", noteId: "smooth-operator"  },
-        { url: "audio/The Neighbourhood - Reflections (Official Audio).mp3",                                               name: "Reflections",     noteId: "reflections"       },
-        { url: "audio/Michael Jackson - Human Nature (Audio).mp3",                                                         name: "Human Nature",    noteId: "human-nature"      },
-        { url: "audio/Sade - Like a Tattoo (Audio).mp3",                                                                   name: "Like a Tattoo",   noteId: "like-a-tattoo"     },
-        { url: "audio/BTS - Let Me Know (방탄소년단 - Let Me Know) [Color Coded LyricsHanRomEng가사].mp4",                 name: "Let Me Know",     noteId: "let-me-know"       },
-        { url: "audio/Still With You.mp3",                                                                                 name: "Still With You",  noteId: "still-with-you"    },
-        { url: "audio/Flatline.mp3",                                                                                       name: "Flatline",        noteId: "flatline"          },
-        { url: "audio/Excitement.mp3",                                                                                     name: "Excitement",      noteId: "excitement"        },
-        { url: "audio/Guns N' Roses - November Rain (Lyrics).mp3",                                                        name: "November Rain",   noteId: "november-rain"     },
-        { url: "audio/Jhené Aiko - stranger (Audio).mp3",                                                                  name: "Stranger",        noteId: "stranger"          },
-        { url: "audio/Salvatore.mp3",                                                                                      name: "Salvatore",       noteId: "salvatore"         }
-    ];
+    // All tracks come from Cloudinary — nothing is hardcoded.
+    // Tracks are added via 'Add Track' and stored in User/notes/track-list on Cloudinary.
+    const DEFAULT_TRACKS = [];
 
-    let tracks    = DEFAULT_TRACKS.map(t => t.url);  // URL-only array for <audio>
-    let trackMeta = [...DEFAULT_TRACKS];              // full {url, name, noteId} array
+    let tracks    = [];  // URL-only array for <audio>
+    let trackMeta = [];  // full {url, name, noteId} array
     let currentTrackIndex = 0;
     let isUploading = false;
 
-    // Fallback note text shown when no Cloudinary file exists for a default track
-    const DEFAULT_NOTES = [
-        { heading: "SMOOTH OPERATOR",  body: "Cool, unhurried. Like velvet on a slow evening — the kind of song that doesn't rush anything." },
-        { heading: "REFLECTIONS",      body: "A quiet ache wrapped in reverb. Every listen feels like staring at something beautiful you can't hold onto." },
-        { heading: "HUMAN NATURE",     body: "Tender and golden. MJ at his most gentle — curiosity turned into music." },
-        { heading: "LIKE A TATTOO",    body: "Some feelings don't fade. Sade sings like she's lived every word of this." },
-        { heading: "LET ME KNOW",      body: "Soft BTS harmonies over aching questions. A song that sits quietly inside you." },
-        { heading: "STILL WITH YOU",   body: "JK's longing poured into sound. Still feels present even in its absence." },
-        { heading: "FLATLINE",         body: "Numbness in melody form. The kind of song you play when words aren't enough." },
-        { heading: "EXCITEMENT",       body: "An upswing — warmth and motion in one. Exactly what the title promises." },
-        { heading: "NOVEMBER RAIN",    body: "Nine minutes of build and release. Grief dressed up as a love song." },
-        { heading: "STRANGER",         body: "Dreamy and cool. Jhene floats through this one like she's not even trying." },
-        { heading: "SALVATORE",        body: "Lana at her most cinematic. Longing for something too beautiful to name." }
-    ];
+
+    // No default notes — notes are saved per-track to Cloudinary by the admin.
+
 
     // Per-track note cache — lazy loaded on demand. undefined = not fetched yet.
     let trackNotes = [];
@@ -558,21 +536,22 @@ document.addEventListener('DOMContentLoaded', () => {
         toastTimer = setTimeout(() => p5ErrorToast.classList.remove('visible'), 3000);
     }
 
-    // Show / hide Manage Tracks button — visible for admin always, except when Save Track is visible
+    // Show / hide Manage Tracks button.
+    // Rule: always visible for admin. Hidden only when Save Track is showing (setUploadLock handles that).
+    // IMPORTANT: this function must NOT reference p5SaveBtn or any const declared later in this
+    // DOMContentLoaded block, because applyRole() can call it before those consts are initialised.
     window.updateManageTracksBtn = function () {
         if (!p5ManageTracksBtn) return;
         try {
             const session = JSON.parse(localStorage.getItem('grace_session') || '{}');
-            const isAdmin      = session.role === 'admin';
-            // Only show when: admin, and NOT during an upload (Save Track visible)
-            const saveVisible  = p5SaveBtn && p5SaveBtn.style.display !== 'none';
-            p5ManageTracksBtn.style.display = (isAdmin && !saveVisible) ? '' : 'none';
+            p5ManageTracksBtn.style.display = (session.role === 'admin') ? '' : 'none';
         } catch {
             p5ManageTracksBtn.style.display = 'none';
         }
     };
-    // Alias so applyRole still works
+    // Alias so applyRole and legacy code still works
     window.updateRemoveTrackBtn = window.updateManageTracksBtn;
+
 
     // Render a cached note to the UI
     function displayTrackNote(index) {
@@ -590,23 +569,24 @@ document.addEventListener('DOMContentLoaded', () => {
         p5Baseline = { heading: note.heading || '', body: note.body || '' };
     }
 
-    // Lazy-fetch a track's note from its own Cloudinary file
+    // Lazy-fetch a track's note from its own Cloudinary file.
+    // If no note is saved yet, shows empty placeholders (admin fills these in via the note area).
     async function fetchNoteForTrack(index) {
         const meta = trackMeta[index];
         if (!meta) return;
         try {
-            const res  = await fetch(`/api/track-note/${encodeURIComponent(meta.noteId)}?_cb=` + Date.now(), { cache: 'no-store' });
+            const res  = await fetch(`/api/track-note/${encodeURIComponent(meta.noteId)}`);
             const note = await res.json();
-            // If Cloudinary returned a real note, use it; otherwise fall back to hardcoded default
+            // Use saved note if it exists; otherwise show blank template
             trackNotes[index] = (note && (note.heading || note.body))
                 ? note
-                : (DEFAULT_NOTES[index] || { heading: '', body: '' });
+                : { heading: '', body: '' };
         } catch {
-            trackNotes[index] = DEFAULT_NOTES[index] || { heading: '', body: '' };
+            trackNotes[index] = { heading: '', body: '' };
         }
-        // Only update the display if this track is still the active one
         if (index === currentTrackIndex) displayTrackNote(index);
     }
+
 
     // ── Disc reverse animation — uses the same shared lock as advanceDiscs ────
     window.reverseDiscs = function () {
@@ -617,17 +597,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Custom track list helpers ─────────────────────────────────────────────
     function saveTrackList() {
-        // Only persist the custom (non-default) tracks, with their noteId
-        const customTracks = trackMeta.slice(DEFAULT_TRACKS.length);
+        // Persist ALL tracks (everything is a custom track now — no hardcoded defaults)
         return fetch('/api/track-list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tracks: customTracks })
+            body: JSON.stringify({ tracks: trackMeta })
         }).catch(err => console.error('Could not save track list:', err));
     }
 
+
     function loadTrackList() {
-        return fetch('/api/track-list?_cb=' + Date.now(), { cache: 'no-store' })
+        return fetch('/api/track-list')
             .then(res => res.json())
             .then(customTracks => {
                 if (Array.isArray(customTracks) && customTracks.length > 0) {
@@ -640,12 +620,16 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(() => {});
     }
 
-    // Boot: load track list, set audio src, fetch note for track 0
+    // Boot: load track list from Cloudinary, then set up audio + note if tracks exist
     loadTrackList().then(() => {
-        if (audioElement) audioElement.src = tracks[currentTrackIndex];
-        fetchNoteForTrack(currentTrackIndex);
-        window.updateRemoveTrackBtn();
+        if (tracks.length > 0) {
+            if (audioElement) audioElement.src = tracks[currentTrackIndex];
+            fetchNoteForTrack(currentTrackIndex);
+        }
+        // Show Manage Tracks button if admin (always — even with empty list)
+        window.updateManageTracksBtn();
     });
+
 
     // ── Save Note button ──────────────────────────────────────────────────────
     if (p5NoteSaveBtn) {
@@ -818,14 +802,20 @@ document.addEventListener('DOMContentLoaded', () => {
         p5ManageTracksBtn.addEventListener('click', openTrackListPopup);
     }
 
-    // ── Upload lock: hide/show Manage Tracks + disable nav during upload ────
+    // ── Upload lock: hide Manage Tracks during upload, restore correctly after ──
     function setUploadLock(locked) {
         isUploading = locked;
         [p5NextBtn, p5PrevBtn, nextTrackBtn, playPauseBtn, p5AddBtn].forEach(btn => {
             if (btn) btn.disabled = locked;
         });
-        // Hide Manage Tracks while Save Track is visible so layout stays clean
-        if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = locked ? 'none' : '';
+        if (locked) {
+            // Hide Manage Tracks while upload in progress
+            if (p5ManageTracksBtn) p5ManageTracksBtn.style.display = 'none';
+        } else {
+            // Restore correctly (respects admin check, not just blind show)
+            window.updateManageTracksBtn();
+        }
+
     }
 
     // ── Add Track + Save Track ───────────────────────────────────────────────
