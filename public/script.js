@@ -66,7 +66,11 @@ function applyRole(role) {
         el.style.display = isAdmin ? '' : 'none';
     });
     document.querySelectorAll('.remove-btn').forEach(el => {
-        el.style.display = isAdmin ? '' : 'none';
+        // Only show remove button if admin AND an image is actually uploaded
+        const container = el.closest('.photo-upload-container');
+        const img = container ? container.querySelector('.uploaded-img') : null;
+        const hasImg = img && img.getAttribute('src') && img.style.display !== 'none';
+        el.style.display = (isAdmin && hasImg) ? 'block' : 'none';
     });
     document.querySelectorAll('.polaroid-save-btn').forEach(el => {
         // Only hide save btns for guests; admins keep whatever state they're in
@@ -219,7 +223,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             uploadedImg.style.display = 'block';
                         }
                         if (uploadContent) uploadContent.style.display = 'none';
-                        if (removeBtn) removeBtn.style.display = 'block';
+                        if (removeBtn) {
+                            const session = getValidSession();
+                            removeBtn.style.display = (session && session.role === 'admin') ? 'block' : 'none';
+                        }
                         if (saveBtn) saveBtn.style.display = 'none';
                     }
                 });
