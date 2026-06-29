@@ -349,6 +349,46 @@ app.post('/api/track-list', async (req, res) => {
     }
 });
 
+// POST /api/views
+// Fetches the current view count, increments it by 1, and saves it.
+// Returns the updated count.
+app.post('/api/views', async (req, res) => {
+    try {
+        let viewCount = 0;
+        try {
+            const result = await cloudinary.api.resource('User/stats/views', { resource_type: 'raw' });
+            const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed.count === 'number') {
+                viewCount = parsed.count;
+            }
+        } catch (e) {
+            // First time or doesn't exist
+        }
+        
+        viewCount += 1;
+        
+        // Save back to Cloudinary
+        const jsonString = JSON.stringify({ count: viewCount });
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'User/stats', public_id: 'views', overwrite: true, resource_type: 'raw' },
+            (error, result) => {
+                if (error) {
+                    return res.status(500).json({ error: error.message });
+                }
+                res.json({ success: true, count: viewCount });
+            }
+        );
+        const rs = new Readable();
+        rs.push(Buffer.from(jsonString, 'utf-8'));
+        rs.push(null);
+        rs.pipe(uploadStream);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {

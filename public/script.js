@@ -145,6 +145,19 @@ function resetInactivityTimer() {
 
 // --- Login form submission ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Update and display view counter
+    const viewCountText = document.getElementById('view-count-text');
+    if (viewCountText) {
+        fetch('/api/views', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.count) {
+                    viewCountText.textContent = data.count.toLocaleString();
+                }
+            })
+            .catch(err => console.error('Error fetching view count:', err));
+    }
+
     const form       = document.getElementById('login-form');
     const usernameEl = document.getElementById('login-username');
     const passwordEl = document.getElementById('login-password');
