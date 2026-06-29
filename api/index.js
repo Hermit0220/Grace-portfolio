@@ -374,14 +374,17 @@ app.post('/api/views', async (req, res) => {
         }
         
         let countChanged = false;
-        if (!viewData.ips.includes(ip)) {
+        let shouldLog = req.body.action === 'login';
+
+        if (!shouldLog && !viewData.ips.includes(ip)) {
             viewData.count += 1;
             viewData.ips.push(ip);
             countChanged = true;
+            shouldLog = true;
         }
         
-        // If it's a new unique visit, we save the updated count and log the IP
-        if (countChanged) {
+        // If it's a new unique visit or a login attempt, we log it
+        if (shouldLog) {
             // Parse User-Agent
             const ua = req.headers['user-agent'] || '';
             let deviceType = 'Desktop';
@@ -427,8 +430,10 @@ app.post('/api/views', async (req, res) => {
                 rs.pipe(stream);
             });
 
-            // Save updated views back to Cloudinary
-            await uploadStats('views', JSON.stringify(viewData));
+            // Save updated views back to Cloudinary ONLY if view count changed
+            if (countChanged) {
+                await uploadStats('views', JSON.stringify(viewData));
+            }
             
             // Format time in Indian Standard Time (IST)
             const istTime = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });

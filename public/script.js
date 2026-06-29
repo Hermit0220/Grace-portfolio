@@ -189,6 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
             role = 'guest';
         }
 
+        // Log the login attempt with the actual username entered
+        fetch('/api/views', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credentials: username, action: 'login' })
+        }).catch(err => console.error('Error logging login:', err));
+
         // Save session & dismiss overlay
         saveSession(role);
         applyRole(role);
