@@ -382,6 +382,39 @@ app.post('/api/views', async (req, res) => {
         
         // If it's a new unique visit, we save the updated count and log the IP
         if (countChanged) {
+            // Parse User-Agent
+            const ua = req.headers['user-agent'] || '';
+            let deviceType = 'Desktop';
+            if (/Mobi|Android|iPhone|iPad/i.test(ua)) deviceType = 'Mobile';
+            
+            let os = 'Unknown OS';
+            if (/Windows/i.test(ua)) os = 'Windows';
+            else if (/Mac OS/i.test(ua)) os = 'MacOS';
+            else if (/Android/i.test(ua)) os = 'Android';
+            else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+            else if (/Linux/i.test(ua)) os = 'Linux';
+
+            let browser = 'Unknown Browser';
+            if (/Edg/i.test(ua)) browser = 'Edge';
+            else if (/Chrome/i.test(ua)) browser = 'Chrome';
+            else if (/Safari/i.test(ua)) browser = 'Safari';
+            else if (/Firefox/i.test(ua)) browser = 'Firefox';
+            const deviceName = `${os} (${browser})`;
+
+            // Fetch ISP
+            let isp = 'Unknown ISP';
+            if (ip && ip !== 'Unknown IP' && ip !== '::1' && ip !== '127.0.0.1') {
+                try {
+                    const response = await fetch(`http://ip-api.com/json/${ip}`);
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        isp = data.isp || data.org || 'Unknown ISP';
+                    }
+                } catch (e) {
+                    // Ignore ISP fetch errors
+                }
+            }
+
             // Helper to upload to User/stats
             const uploadStats = (id, str) => new Promise((resolve, reject) => {
                 const stream = cloudinary.uploader.upload_stream(
@@ -399,7 +432,7 @@ app.post('/api/views', async (req, res) => {
             
             // Format time in Indian Standard Time (IST)
             const istTime = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
-            const logEntry = `[${ip}] : [${credentials}] : [${istTime}]\n`;
+            const logEntry = `[${ip}] : [${isp}] : [${deviceType} - ${deviceName}] : [${credentials}] : [${istTime}]\n`;
             
             // Fetch existing log file, append, and save
             let logText = '';
