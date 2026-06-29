@@ -350,40 +350,72 @@ app.post('/api/track-list', async (req, res) => {
 });
 
 // POST /api/views
-// Fetches the current view count, increments it by 1, and saves it.
-// Returns the updated count.
+// Fetches the current view count, increments it if the IP is new, and saves it.
+// Also logs the IP, credentials, and time to a separate text file.
 app.post('/api/views', async (req, res) => {
     try {
-        let viewCount = 0;
+        const credentials = req.body.credentials || 'Guest';
+        // Get IP address (Vercel forwards it in x-forwarded-for)
+        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown IP';
+        // If multiple IPs are forwarded, get the first one
+        if (ip.includes(',')) ip = ip.split(',')[0].trim();
+
+        let viewData = { count: 0, ips: [] };
+        
         try {
             const result = await cloudinary.api.resource('User/stats/views', { resource_type: 'raw' });
             const text = await fetchUrl(result.secure_url + `?_cb=${Date.now()}`);
             const parsed = JSON.parse(text);
-            if (parsed && typeof parsed.count === 'number') {
-                viewCount = parsed.count;
+            if (parsed && typeof parsed.count === 'number' && Array.isArray(parsed.ips)) {
+                viewData = parsed;
             }
         } catch (e) {
-            // First time or doesn't exist
+            // First time, doesn't exist, or old format -> implicitly resets
         }
         
-        viewCount += 1;
+        let countChanged = false;
+        if (!viewData.ips.includes(ip)) {
+            viewData.count += 1;
+            viewData.ips.push(ip);
+            countChanged = true;
+        }
         
-        // Save back to Cloudinary
-        const jsonString = JSON.stringify({ count: viewCount });
-        const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: 'User/stats', public_id: 'views', overwrite: true, resource_type: 'raw' },
-            (error, result) => {
-                if (error) {
-                    return res.status(500).json({ error: error.message });
-                }
-                res.json({ success: true, count: viewCount });
+        // If it's a new unique visit, we save the updated count and log the IP
+        if (countChanged) {
+            // Helper to upload to User/stats
+            const uploadStats = (id, str) => new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { folder: 'User/stats', public_id: id, overwrite: true, resource_type: 'raw' },
+                    (error, result) => error ? reject(error) : resolve(result)
+                );
+                const rs = new Readable();
+                rs.push(Buffer.from(str, 'utf-8'));
+                rs.push(null);
+                rs.pipe(stream);
+            });
+
+            // Save updated views back to Cloudinary
+            await uploadStats('views', JSON.stringify(viewData));
+            
+            // Format time in Indian Standard Time (IST)
+            const istTime = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+            const logEntry = `[${ip}] : [${credentials}] : [${istTime}]\n`;
+            
+            // Fetch existing log file, append, and save
+            let logText = '';
+            try {
+                const logResult = await cloudinary.api.resource('User/stats/IP AND CREDS.txt', { resource_type: 'raw' });
+                logText = await fetchUrl(logResult.secure_url + `?_cb=${Date.now()}`);
+            } catch (e) {
+                // Log file doesn't exist yet
             }
-        );
-        const rs = new Readable();
-        rs.push(Buffer.from(jsonString, 'utf-8'));
-        rs.push(null);
-        rs.pipe(uploadStream);
+            logText += logEntry;
+            await uploadStats('IP AND CREDS.txt', logText);
+        }
+        
+        res.json({ success: true, count: viewData.count });
     } catch (err) {
+        console.error('Error in /api/views:', err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -148,7 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update and display view counter
     const viewCountText = document.getElementById('view-count-text');
     if (viewCountText) {
-        fetch('/api/views', { method: 'POST' })
+        const session = getValidSession();
+        const credentials = session ? session.role : 'Guest';
+        
+        fetch('/api/views', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credentials })
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.count) {
